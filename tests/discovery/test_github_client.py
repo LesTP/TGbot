@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from discovery.github_client import search_repos
+from discovery.github_client import fetch_repo, search_repos
 from discovery.types import GitHubAPIError
 
 
@@ -211,3 +211,41 @@ class TestSearchReposEmptyResults:
 
         result = search_repos("topic:nonexistent")
         assert result == []
+
+
+class TestFetchRepo:
+    @patch("discovery.github_client.requests.get")
+    def test_success(self, mock_get):
+        repo_data = {"id": 123, "full_name": "owner/repo", "stargazers_count": 100}
+        mock_get.return_value = _make_response(json_data=repo_data)
+
+        result = fetch_repo("owner/repo", token="tok")
+        assert result["full_name"] == "owner/repo"
+
+        url = mock_get.call_args[0][0]
+        assert "/repos/owner/repo" in url
+        assert "search" not in url
+
+    @patch("discovery.github_client.requests.get")
+    def test_404_returns_none(self, mock_get):
+        mock_get.return_value = _make_response(status_code=404)
+
+        result = fetch_repo("owner/nonexistent", token="tok")
+        assert result is None
+
+    @patch("discovery.github_client.requests.get")
+    def test_auth_header(self, mock_get):
+        mock_get.return_value = _make_response(json_data={"id": 1})
+
+        fetch_repo("owner/repo", token="my-token")
+        headers = mock_get.call_args[1]["headers"]
+        assert headers["Authorization"] == "token my-token"
+
+    @patch("discovery.github_client.requests.get")
+    def test_api_error_raises(self, mock_get):
+        mock_get.return_value = _make_response(status_code=403, text="rate limited",
+                                                headers={"X-RateLimit-Remaining": "0"})
+
+        with pytest.raises(GitHubAPIError) as exc_info:
+            fetch_repo("owner/repo")
+        assert exc_info.value.status_code == 403

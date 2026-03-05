@@ -17,7 +17,7 @@
 ## Current Status
 
 **Phase:** 1 — Discovery implementation
-**Focus:** Step 4 — Quality filtering
+**Focus:** Step 7 — discover_repos integration
 **Blocked/Broken:** Nothing.
 
 ---

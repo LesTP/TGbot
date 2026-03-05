@@ -138,6 +138,52 @@ def search_repos(
     return all_items
 
 
+def _request_get(url: str, headers: dict) -> requests.Response:
+    """Execute a GET request with standard error handling."""
+    try:
+        return requests.get(url, headers=headers, timeout=30)
+    except requests.ConnectionError as exc:
+        raise GitHubAPIError(f"Network error connecting to GitHub: {exc}") from exc
+    except requests.Timeout as exc:
+        raise GitHubAPIError("GitHub API request timed out.") from exc
+    except requests.RequestException as exc:
+        raise GitHubAPIError(f"GitHub API request failed: {exc}") from exc
+
+
+def fetch_repo(
+    full_name: str,
+    token: Optional[str] = None,
+) -> Optional[dict]:
+    """Fetch a single repository by full name (owner/repo).
+
+    Uses ``GET /repos/{owner}/{repo}`` which returns the same fields
+    as search results plus additional metadata (subscribers_count).
+
+    Args:
+        full_name: Repository full name (e.g. "anthropics/anthropic-cookbook").
+        token: GitHub personal access token. Optional.
+
+    Returns:
+        Raw repo dict from the GitHub API, or None if the repo
+        does not exist (404).
+
+    Raises:
+        GitHubAPIError: On auth failure, rate limiting, server errors,
+                        or network errors. Does NOT raise on 404.
+    """
+    url = f"{GITHUB_API_BASE}/repos/{full_name}"
+    headers = _build_headers(token)
+    response = _request_get(url, headers)
+
+    if response.status_code == 404:
+        return None
+
+    if response.status_code != 200:
+        _raise_for_github_error(response)
+
+    return response.json()
+
+
 def fetch_readme(
     owner: str,
     repo: str,
@@ -165,15 +211,7 @@ def fetch_readme(
     """
     url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/readme"
     headers = _build_headers(token)
-
-    try:
-        response = requests.get(url, headers=headers, timeout=30)
-    except requests.ConnectionError as exc:
-        raise GitHubAPIError(f"Network error connecting to GitHub: {exc}") from exc
-    except requests.Timeout as exc:
-        raise GitHubAPIError("GitHub API request timed out.") from exc
-    except requests.RequestException as exc:
-        raise GitHubAPIError(f"GitHub API request failed: {exc}") from exc
+    response = _request_get(url, headers)
 
     if response.status_code == 404:
         return None

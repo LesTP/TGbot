@@ -21,6 +21,50 @@
 
 **Issues:** None.
 
+## Step 6 — Seed repo handling
+**Date:** 2026-03-06
+
+**What was done:**
+- Added `fetch_repo(full_name, token)` to `github_client.py` — single repo fetch via Repos API, returns `None` on 404
+- Extracted `_request_get()` helper to share error handling between `fetch_repo` and `fetch_readme`
+- Created `src/discovery/seeds.py` with `fetch_seed_repos(seeds, token)` — fetches each seed's metadata + README, skips 404s, returns raw dicts with `readme_content` key
+- Added 4 `fetch_repo` tests to `test_github_client.py`, created `tests/discovery/test_seeds.py` with 7 tests
+
+**Decisions:**
+- `fetch_seed_repos` returns raw dicts (not `DiscoveredRepo`) so seeds can be merged, filtered, and sorted uniformly with search results in the integration step.
+- Seeds with `None` README are still returned — quality filtering happens downstream.
+
+**Issues:** None.
+
+## Step 5 — Ranking/sorting
+**Date:** 2026-03-06
+
+**What was done:**
+- Created `src/discovery/ranking.py` with `sort_repos(repos, criteria)`
+- Table-driven design: `_SORT_KEYS` maps `RankingCriteria` → GitHub API field name, `_DEFAULTS` handles missing keys
+- All criteria sort descending; stable sort preserves original order on ties
+- Created `tests/discovery/test_ranking.py` with 10 tests (one per criteria + stable sort + edge cases)
+
+**Decisions:**
+- "Activity" = `pushed_at` (most recent push to any branch). Distinct from `updated_at` (any repo event). Already in search results, no extra API call needed. Will need to carry `pushed_at` into `DiscoveredRepo.source_metadata` during Step 7 conversion.
+
+**Issues:** None.
+
+## Step 4 — Quality filtering
+**Date:** 2026-03-05
+
+**What was done:**
+- Created `src/discovery/filters.py` with `apply_quality_filters(repos, config, is_expansion)`
+- Five filter criteria: min stars (with +50 for expansion), fork exclusion, archived exclusion, README presence + min length, language match
+- Filters operate on raw GitHub API dicts augmented with `readme_content` key — avoids constructing DiscoveredRepo for repos that will be filtered out
+- Case-insensitive language comparison
+- Created `tests/discovery/test_filters.py` with 23 tests across 6 classes
+
+**Decisions:**
+- `is_expansion` parameter on the filter function controls the +50 star threshold, rather than requiring callers to modify the config object.
+
+**Issues:** None.
+
 ## Step 3 — README fetching
 **Date:** 2026-03-05
 
