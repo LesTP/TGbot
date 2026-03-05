@@ -17,7 +17,7 @@
 ## Current Status
 
 **Phase:** 1 — Discovery implementation
-**Focus:** Not yet started. Pending approval of phase plan.
+**Focus:** Step 4 — Quality filtering
 **Blocked/Broken:** Nothing.
 
 ---
