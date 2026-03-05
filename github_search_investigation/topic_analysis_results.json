@@ -1,0 +1,2079 @@
+{
+  "topic_counts": {
+    "ai": 203,
+    "llm": 166,
+    "claude-code": 117,
+    "code-generation": 106,
+    "claude": 92,
+    "ai-agents": 80,
+    "awesome": 77,
+    "awesome-list": 77,
+    "mcp": 77,
+    "openai": 70,
+    "agent": 67,
+    "agents": 64,
+    "python": 63,
+    "developer-tools": 62,
+    "anthropic": 46,
+    "chatgpt": 46,
+    "cli": 46,
+    "gemini": 43,
+    "typescript": 41,
+    "agentic-ai": 39,
+    "machine-learning": 37,
+    "codex": 37,
+    "coding-assistant": 36,
+    "llms": 33,
+    "cursor": 33,
+    "artificial-intelligence": 33,
+    "vibe-coding": 32,
+    "gpt-4": 31,
+    "hacktoberfest": 29,
+    "gpt": 29,
+    "rag": 28,
+    "prompt-engineering": 28,
+    "open-source": 27,
+    "large-language-models": 26,
+    "agentic-coding": 26,
+    "mcp-server": 25,
+    "generative-ai": 25,
+    "golang": 24,
+    "ai-tools": 24,
+    "rust": 24,
+    "javascript": 24,
+    "copilot": 23,
+    "ai-agent": 23,
+    "ai-coding": 23,
+    "deep-learning": 22,
+    "claude-ai": 21,
+    "ollama": 20,
+    "opencode": 20,
+    "react": 20,
+    "claude-skills": 19,
+    "gemini-cli": 19,
+    "deepseek": 18,
+    "github-copilot": 18,
+    "automation": 18,
+    "agentic-workflow": 17,
+    "skills": 17,
+    "productivity": 16,
+    "genai": 16,
+    "autonomous-agents": 16,
+    "multi-agent": 16,
+    "ai-assistant": 16,
+    "ai-coding-assistant": 16,
+    "go": 15,
+    "agent-skills": 15,
+    "vscode": 14,
+    "nlp": 14,
+    "terminal": 14,
+    "langchain": 14,
+    "llama": 13,
+    "java": 13,
+    "nodejs": 13,
+    "agentic": 13,
+    "multi-agent-systems": 13,
+    "awesome-lists": 12,
+    "ide": 12,
+    "coding": 12,
+    "vscode-extension": 12,
+    "llm-agent": 12,
+    "antigravity": 11,
+    "llmops": 11,
+    "language-model": 11,
+    "model-context-protocol": 11,
+    "ai-developer-tools": 11,
+    "api": 11,
+    "prompt": 11,
+    "self-hosted": 10,
+    "codegen": 10,
+    "data-science": 10,
+    "nextjs": 10,
+    "anthropic-claude": 10,
+    "openclaw": 10,
+    "csharp": 10,
+    "swift": 10,
+    "workflow": 10,
+    "code-assistant": 10,
+    "mcp-servers": 9,
+    "github": 9,
+    "postgresql": 9,
+    "aws": 9,
+    "claudecode": 9,
+    "subagents": 9,
+    "agentic-framework": 9,
+    "chatbot": 9,
+    "chain-of-thought": 9,
+    "codex-cli": 9,
+    "code-analysis": 9,
+    "ai-agents-framework": 9,
+    "code-generator": 9,
+    "macos": 8,
+    "tui": 8,
+    "command-line": 8,
+    "framework": 8,
+    "spec-driven-development": 8,
+    "claude-code-skills": 8,
+    "devtools": 8,
+    "workflow-automation": 8,
+    "dotnet": 8,
+    "agent-framework": 8,
+    "game-development": 8,
+    "reinforcement-learning": 8,
+    "qwen": 7,
+    "multimodal": 7,
+    "embeddings": 7,
+    "retrieval-augmented-generation": 7,
+    "coding-agent": 7,
+    "llm-inference": 7,
+    "computer-vision": 7,
+    "natural-language-processing": 7,
+    "security": 7,
+    "code": 7,
+    "code-quality": 7,
+    "aiagents": 7,
+    "emacs": 7,
+    "ai-development": 7,
+    "aider": 7,
+    "kotlin": 7,
+    "resources": 6,
+    "desktop-app": 6,
+    "list": 6,
+    "transformers": 6,
+    "frontend": 6,
+    "prisma": 6,
+    "orchestration": 6,
+    "gpt-5": 6,
+    "clawdbot": 6,
+    "context-engineering": 6,
+    "tutorial": 6,
+    "langgraph": 6,
+    "neovim": 6,
+    "n8n": 6,
+    "huggingface": 6,
+    "semantic-search": 6,
+    "git": 6,
+    "claude-desktop": 6,
+    "openai-api": 6,
+    "security-tools": 6,
+    "code-review": 6,
+    "performance": 6,
+    "gpt4": 6,
+    "ast": 6,
+    "json": 6,
+    "compiler": 6,
+    "generator": 6,
+    "ai-coding-tools": 6,
+    "robotics": 6,
+    "lists": 5,
+    "windsurf": 5,
+    "cpp": 5,
+    "local-llm": 5,
+    "vector-database": 5,
+    "linux": 5,
+    "web": 5,
+    "data-analysis": 5,
+    "gpt-4o": 5,
+    "google": 5,
+    "microservices": 5,
+    "workflows": 5,
+    "opensource": 5,
+    "claude-code-cli": 5,
+    "claudecode-subagents": 5,
+    "coding-agents": 5,
+    "shell": 5,
+    "deepseek-r1": 5,
+    "vue": 5,
+    "programming": 5,
+    "mlops": 5,
+    "agentic-rag": 5,
+    "chat": 5,
+    "ml": 5,
+    "dotnet-core": 5,
+    "low-code": 5,
+    "css": 5,
+    "large-language-model": 5,
+    "aiagent": 5,
+    "memory": 5,
+    "prompts": 5,
+    "multi-agent-system": 5,
+    "vibecoding": 5,
+    "tools": 5,
+    "gui": 5
+  },
+  "top_cooccurrences": [
+    [
+      [
+        "ai",
+        "llm"
+      ],
+      86
+    ],
+    [
+      [
+        "awesome",
+        "awesome-list"
+      ],
+      61
+    ],
+    [
+      [
+        "claude",
+        "claude-code"
+      ],
+      53
+    ],
+    [
+      [
+        "llm",
+        "openai"
+      ],
+      41
+    ],
+    [
+      [
+        "ai",
+        "openai"
+      ],
+      40
+    ],
+    [
+      [
+        "ai",
+        "claude"
+      ],
+      40
+    ],
+    [
+      [
+        "agents",
+        "ai"
+      ],
+      36
+    ],
+    [
+      [
+        "ai",
+        "mcp"
+      ],
+      34
+    ],
+    [
+      [
+        "agent",
+        "ai"
+      ],
+      34
+    ],
+    [
+      [
+        "ai",
+        "ai-agents"
+      ],
+      34
+    ],
+    [
+      [
+        "agent",
+        "llm"
+      ],
+      32
+    ],
+    [
+      [
+        "ai",
+        "claude-code"
+      ],
+      32
+    ],
+    [
+      [
+        "claude",
+        "llm"
+      ],
+      31
+    ],
+    [
+      [
+        "llm",
+        "mcp"
+      ],
+      30
+    ],
+    [
+      [
+        "claude-code",
+        "codex"
+      ],
+      30
+    ],
+    [
+      [
+        "anthropic",
+        "claude"
+      ],
+      28
+    ],
+    [
+      [
+        "ai",
+        "developer-tools"
+      ],
+      28
+    ],
+    [
+      [
+        "ai",
+        "gemini"
+      ],
+      28
+    ],
+    [
+      [
+        "ai-agents",
+        "claude-code"
+      ],
+      27
+    ],
+    [
+      [
+        "anthropic",
+        "claude-code"
+      ],
+      27
+    ],
+    [
+      [
+        "ai",
+        "chatgpt"
+      ],
+      27
+    ],
+    [
+      [
+        "ai",
+        "python"
+      ],
+      26
+    ],
+    [
+      [
+        "agents",
+        "llm"
+      ],
+      26
+    ],
+    [
+      [
+        "developer-tools",
+        "llm"
+      ],
+      25
+    ],
+    [
+      [
+        "claude",
+        "gemini"
+      ],
+      25
+    ],
+    [
+      [
+        "ai-agents",
+        "llm"
+      ],
+      24
+    ],
+    [
+      [
+        "chatgpt",
+        "openai"
+      ],
+      24
+    ],
+    [
+      [
+        "llm",
+        "python"
+      ],
+      22
+    ],
+    [
+      [
+        "anthropic",
+        "llm"
+      ],
+      22
+    ],
+    [
+      [
+        "claude-code",
+        "developer-tools"
+      ],
+      22
+    ],
+    [
+      [
+        "mcp",
+        "mcp-server"
+      ],
+      22
+    ],
+    [
+      [
+        "agentic-ai",
+        "ai"
+      ],
+      22
+    ],
+    [
+      [
+        "gpt",
+        "llm"
+      ],
+      21
+    ],
+    [
+      [
+        "claude-code",
+        "llm"
+      ],
+      21
+    ],
+    [
+      [
+        "ai",
+        "awesome"
+      ],
+      21
+    ],
+    [
+      [
+        "chatgpt",
+        "llm"
+      ],
+      21
+    ],
+    [
+      [
+        "ai",
+        "gpt"
+      ],
+      20
+    ],
+    [
+      [
+        "claude-code",
+        "mcp"
+      ],
+      20
+    ],
+    [
+      [
+        "ai",
+        "coding-assistant"
+      ],
+      20
+    ],
+    [
+      [
+        "anthropic",
+        "openai"
+      ],
+      20
+    ],
+    [
+      [
+        "gemini",
+        "openai"
+      ],
+      20
+    ],
+    [
+      [
+        "claude",
+        "openai"
+      ],
+      20
+    ],
+    [
+      [
+        "ai",
+        "cli"
+      ],
+      20
+    ],
+    [
+      [
+        "claude",
+        "developer-tools"
+      ],
+      19
+    ],
+    [
+      [
+        "claude-code",
+        "opencode"
+      ],
+      19
+    ],
+    [
+      [
+        "ai",
+        "artificial-intelligence"
+      ],
+      19
+    ],
+    [
+      [
+        "agentic-ai",
+        "agents"
+      ],
+      19
+    ],
+    [
+      [
+        "ai-agents",
+        "developer-tools"
+      ],
+      18
+    ],
+    [
+      [
+        "claude",
+        "mcp"
+      ],
+      18
+    ],
+    [
+      [
+        "ai",
+        "gpt-4"
+      ],
+      18
+    ],
+    [
+      [
+        "claude-code",
+        "cursor"
+      ],
+      18
+    ],
+    [
+      [
+        "ai",
+        "llms"
+      ],
+      18
+    ],
+    [
+      [
+        "agentic-coding",
+        "claude-code"
+      ],
+      18
+    ],
+    [
+      [
+        "awesome-list",
+        "llm"
+      ],
+      18
+    ],
+    [
+      [
+        "ai",
+        "awesome-list"
+      ],
+      18
+    ],
+    [
+      [
+        "cli",
+        "llm"
+      ],
+      17
+    ],
+    [
+      [
+        "gemini",
+        "llm"
+      ],
+      17
+    ],
+    [
+      [
+        "llm",
+        "open-source"
+      ],
+      17
+    ],
+    [
+      [
+        "claude-code",
+        "cli"
+      ],
+      17
+    ],
+    [
+      [
+        "large-language-models",
+        "llm"
+      ],
+      16
+    ],
+    [
+      [
+        "ai-agents",
+        "mcp"
+      ],
+      16
+    ],
+    [
+      [
+        "llm",
+        "rag"
+      ],
+      16
+    ],
+    [
+      [
+        "ai",
+        "code-generation"
+      ],
+      16
+    ],
+    [
+      [
+        "chatgpt",
+        "claude"
+      ],
+      16
+    ],
+    [
+      [
+        "cli",
+        "developer-tools"
+      ],
+      16
+    ],
+    [
+      [
+        "ai",
+        "machine-learning"
+      ],
+      16
+    ],
+    [
+      [
+        "ai",
+        "generative-ai"
+      ],
+      16
+    ],
+    [
+      [
+        "claude-ai",
+        "claude-code"
+      ],
+      16
+    ],
+    [
+      [
+        "ai",
+        "cursor"
+      ],
+      15
+    ],
+    [
+      [
+        "ai",
+        "open-source"
+      ],
+      15
+    ],
+    [
+      [
+        "gpt-4",
+        "openai"
+      ],
+      15
+    ],
+    [
+      [
+        "chatgpt",
+        "gemini"
+      ],
+      15
+    ],
+    [
+      [
+        "claude-code",
+        "claude-skills"
+      ],
+      15
+    ],
+    [
+      [
+        "coding-assistant",
+        "developer-tools"
+      ],
+      15
+    ],
+    [
+      [
+        "ai",
+        "rag"
+      ],
+      15
+    ],
+    [
+      [
+        "agent",
+        "claude"
+      ],
+      15
+    ],
+    [
+      [
+        "claude",
+        "cli"
+      ],
+      15
+    ],
+    [
+      [
+        "agent",
+        "openai"
+      ],
+      15
+    ],
+    [
+      [
+        "gpt",
+        "openai"
+      ],
+      15
+    ],
+    [
+      [
+        "artificial-intelligence",
+        "llm"
+      ],
+      15
+    ],
+    [
+      [
+        "claude-code",
+        "vibe-coding"
+      ],
+      15
+    ],
+    [
+      [
+        "ai",
+        "codex"
+      ],
+      15
+    ],
+    [
+      [
+        "go",
+        "golang"
+      ],
+      14
+    ],
+    [
+      [
+        "deep-learning",
+        "machine-learning"
+      ],
+      14
+    ],
+    [
+      [
+        "agents",
+        "ai-agents"
+      ],
+      14
+    ],
+    [
+      [
+        "ai",
+        "anthropic"
+      ],
+      14
+    ],
+    [
+      [
+        "awesome",
+        "llm"
+      ],
+      14
+    ],
+    [
+      [
+        "claude",
+        "claude-ai"
+      ],
+      14
+    ],
+    [
+      [
+        "claude-code",
+        "gemini-cli"
+      ],
+      14
+    ],
+    [
+      [
+        "code-generation",
+        "llm"
+      ],
+      14
+    ],
+    [
+      [
+        "llm",
+        "llms"
+      ],
+      13
+    ],
+    [
+      [
+        "ai",
+        "deepseek"
+      ],
+      13
+    ],
+    [
+      [
+        "ai-agents",
+        "claude"
+      ],
+      13
+    ],
+    [
+      [
+        "ai",
+        "typescript"
+      ],
+      13
+    ],
+    [
+      [
+        "code-generation",
+        "golang"
+      ],
+      13
+    ],
+    [
+      [
+        "agents",
+        "claude-code"
+      ],
+      13
+    ],
+    [
+      [
+        "gpt-4",
+        "llm"
+      ],
+      13
+    ],
+    [
+      [
+        "agent",
+        "claude-code"
+      ],
+      13
+    ],
+    [
+      [
+        "ai",
+        "ai-coding"
+      ],
+      13
+    ],
+    [
+      [
+        "ai",
+        "vibe-coding"
+      ],
+      13
+    ]
+  ],
+  "expansion_candidates": [
+    {
+      "topic": "ai",
+      "score": 62,
+      "co_occurs_with": [
+        [
+          "code-generation",
+          16
+        ],
+        [
+          "coding-assistant",
+          20
+        ],
+        [
+          "ai-developer-tools",
+          8
+        ],
+        [
+          "code-assistant",
+          6
+        ],
+        [
+          "agentic-coding",
+          7
+        ],
+        [
+          "ai-coding-assistant",
+          5
+        ]
+      ]
+    },
+    {
+      "topic": "llm",
+      "score": 44,
+      "co_occurs_with": [
+        [
+          "agentic-coding",
+          6
+        ],
+        [
+          "coding-assistant",
+          12
+        ],
+        [
+          "ai-developer-tools",
+          2
+        ],
+        [
+          "code-generation",
+          14
+        ],
+        [
+          "ai-pair-programming",
+          3
+        ],
+        [
+          "code-assistant",
+          5
+        ],
+        [
+          "ai-coding-assistant",
+          2
+        ]
+      ]
+    },
+    {
+      "topic": "developer-tools",
+      "score": 42,
+      "co_occurs_with": [
+        [
+          "coding-assistant",
+          15
+        ],
+        [
+          "ai-developer-tools",
+          2
+        ],
+        [
+          "code-assistant",
+          4
+        ],
+        [
+          "code-generation",
+          8
+        ],
+        [
+          "agentic-coding",
+          6
+        ],
+        [
+          "ai-coding-assistant",
+          5
+        ],
+        [
+          "ai-pair-programming",
+          2
+        ]
+      ]
+    },
+    {
+      "topic": "claude-code",
+      "score": 41,
+      "co_occurs_with": [
+        [
+          "agentic-coding",
+          18
+        ],
+        [
+          "coding-assistant",
+          9
+        ],
+        [
+          "autonomous-coding",
+          3
+        ],
+        [
+          "ai-coding-assistant",
+          9
+        ],
+        [
+          "ai-pair-programming",
+          2
+        ]
+      ]
+    },
+    {
+      "topic": "claude",
+      "score": 32,
+      "co_occurs_with": [
+        [
+          "agentic-coding",
+          8
+        ],
+        [
+          "coding-assistant",
+          12
+        ],
+        [
+          "ai-developer-tools",
+          2
+        ],
+        [
+          "code-assistant",
+          2
+        ],
+        [
+          "code-generation",
+          2
+        ],
+        [
+          "ai-coding-assistant",
+          4
+        ],
+        [
+          "autonomous-coding",
+          2
+        ]
+      ]
+    },
+    {
+      "topic": "ai-agents",
+      "score": 29,
+      "co_occurs_with": [
+        [
+          "autonomous-coding",
+          2
+        ],
+        [
+          "ai-developer-tools",
+          4
+        ],
+        [
+          "agentic-coding",
+          6
+        ],
+        [
+          "code-generation",
+          2
+        ],
+        [
+          "ai-coding-assistant",
+          6
+        ],
+        [
+          "coding-assistant",
+          9
+        ]
+      ]
+    },
+    {
+      "topic": "openai",
+      "score": 18,
+      "co_occurs_with": [
+        [
+          "code-generation",
+          8
+        ],
+        [
+          "coding-assistant",
+          8
+        ],
+        [
+          "code-assistant",
+          2
+        ]
+      ]
+    },
+    {
+      "topic": "ai-coding",
+      "score": 18,
+      "co_occurs_with": [
+        [
+          "ai-developer-tools",
+          4
+        ],
+        [
+          "agentic-coding",
+          4
+        ],
+        [
+          "ai-coding-assistant",
+          4
+        ],
+        [
+          "ai-pair-programming",
+          2
+        ],
+        [
+          "coding-assistant",
+          4
+        ]
+      ]
+    },
+    {
+      "topic": "golang",
+      "score": 16,
+      "co_occurs_with": [
+        [
+          "code-generation",
+          13
+        ],
+        [
+          "ai-developer-tools",
+          3
+        ]
+      ]
+    },
+    {
+      "topic": "agent",
+      "score": 16,
+      "co_occurs_with": [
+        [
+          "code-generation",
+          9
+        ],
+        [
+          "coding-assistant",
+          2
+        ],
+        [
+          "code-assistant",
+          2
+        ],
+        [
+          "agentic-coding",
+          3
+        ]
+      ]
+    },
+    {
+      "topic": "mcp",
+      "score": 16,
+      "co_occurs_with": [
+        [
+          "code-generation",
+          3
+        ],
+        [
+          "coding-assistant",
+          7
+        ],
+        [
+          "ai-coding-assistant",
+          3
+        ],
+        [
+          "agentic-coding",
+          3
+        ]
+      ]
+    },
+    {
+      "topic": "vibe-coding",
+      "score": 15,
+      "co_occurs_with": [
+        [
+          "agentic-coding",
+          5
+        ],
+        [
+          "code-generation",
+          3
+        ],
+        [
+          "coding-assistant",
+          2
+        ],
+        [
+          "ai-coding-assistant",
+          5
+        ]
+      ]
+    },
+    {
+      "topic": "anthropic",
+      "score": 13,
+      "co_occurs_with": [
+        [
+          "agentic-coding",
+          4
+        ],
+        [
+          "coding-assistant",
+          7
+        ],
+        [
+          "ai-pair-programming",
+          2
+        ]
+      ]
+    },
+    {
+      "topic": "gpt-4",
+      "score": 12,
+      "co_occurs_with": [
+        [
+          "code-generation",
+          4
+        ],
+        [
+          "coding-assistant",
+          5
+        ],
+        [
+          "code-assistant",
+          3
+        ]
+      ]
+    },
+    {
+      "topic": "codegen",
+      "score": 11,
+      "co_occurs_with": [
+        [
+          "code-generation",
+          5
+        ],
+        [
+          "coding-assistant",
+          6
+        ]
+      ]
+    },
+    {
+      "topic": "agents",
+      "score": 11,
+      "co_occurs_with": [
+        [
+          "ai-developer-tools",
+          2
+        ],
+        [
+          "code-generation",
+          3
+        ],
+        [
+          "agentic-coding",
+          6
+        ]
+      ]
+    },
+    {
+      "topic": "agentic-ai",
+      "score": 11,
+      "co_occurs_with": [
+        [
+          "agentic-coding",
+          8
+        ],
+        [
+          "coding-assistant",
+          3
+        ]
+      ]
+    },
+    {
+      "topic": "ai-tools",
+      "score": 10,
+      "co_occurs_with": [
+        [
+          "ai-developer-tools",
+          3
+        ],
+        [
+          "ai-coding-assistant",
+          3
+        ],
+        [
+          "coding-assistant",
+          4
+        ]
+      ]
+    },
+    {
+      "topic": "productivity",
+      "score": 10,
+      "co_occurs_with": [
+        [
+          "agentic-coding",
+          4
+        ],
+        [
+          "ai-coding-assistant",
+          2
+        ],
+        [
+          "code-generation",
+          2
+        ],
+        [
+          "coding-assistant",
+          2
+        ]
+      ]
+    },
+    {
+      "topic": "gemini",
+      "score": 9,
+      "co_occurs_with": [
+        [
+          "ai-developer-tools",
+          2
+        ],
+        [
+          "coding-assistant",
+          5
+        ],
+        [
+          "code-generation",
+          2
+        ]
+      ]
+    },
+    {
+      "topic": "gemini-cli",
+      "score": 9,
+      "co_occurs_with": [
+        [
+          "code-generation",
+          2
+        ],
+        [
+          "ai-coding-assistant",
+          3
+        ],
+        [
+          "code-assistant",
+          2
+        ],
+        [
+          "coding-assistant",
+          2
+        ]
+      ]
+    },
+    {
+      "topic": "cursor",
+      "score": 9,
+      "co_occurs_with": [
+        [
+          "ai-coding-assistant",
+          6
+        ],
+        [
+          "coding-assistant",
+          3
+        ]
+      ]
+    },
+    {
+      "topic": "code-generator",
+      "score": 8,
+      "co_occurs_with": [
+        [
+          "code-generation",
+          8
+        ]
+      ]
+    },
+    {
+      "topic": "chatgpt",
+      "score": 7,
+      "co_occurs_with": [
+        [
+          "ai-developer-tools",
+          2
+        ],
+        [
+          "code-generation",
+          3
+        ],
+        [
+          "coding-assistant",
+          2
+        ]
+      ]
+    },
+    {
+      "topic": "claude-ai",
+      "score": 7,
+      "co_occurs_with": [
+        [
+          "agentic-coding",
+          5
+        ],
+        [
+          "coding-assistant",
+          2
+        ]
+      ]
+    },
+    {
+      "topic": "ai-assistant",
+      "score": 7,
+      "co_occurs_with": [
+        [
+          "code-generation",
+          2
+        ],
+        [
+          "ai-pair-programming",
+          2
+        ],
+        [
+          "coding-assistant",
+          3
+        ]
+      ]
+    },
+    {
+      "topic": "ai-agent",
+      "score": 7,
+      "co_occurs_with": [
+        [
+          "ai-coding-assistant",
+          2
+        ],
+        [
+          "coding-assistant",
+          5
+        ]
+      ]
+    },
+    {
+      "topic": "ai-coding-tools",
+      "score": 7,
+      "co_occurs_with": [
+        [
+          "ai-coding-assistant",
+          3
+        ],
+        [
+          "ai-developer-tools",
+          2
+        ],
+        [
+          "coding-assistant",
+          2
+        ]
+      ]
+    },
+    {
+      "topic": "machine-learning",
+      "score": 7,
+      "co_occurs_with": [
+        [
+          "code-generation",
+          5
+        ],
+        [
+          "coding-assistant",
+          2
+        ]
+      ]
+    },
+    {
+      "topic": "prompt-engineering",
+      "score": 7,
+      "co_occurs_with": [
+        [
+          "code-generation",
+          2
+        ],
+        [
+          "coding-assistant",
+          2
+        ],
+        [
+          "code-assistant",
+          3
+        ]
+      ]
+    },
+    {
+      "topic": "ai-development",
+      "score": 7,
+      "co_occurs_with": [
+        [
+          "ai-coding-assistant",
+          2
+        ],
+        [
+          "ai-developer-tools",
+          3
+        ],
+        [
+          "code-generation",
+          2
+        ]
+      ]
+    },
+    {
+      "topic": "llms",
+      "score": 6,
+      "co_occurs_with": [
+        [
+          "coding-assistant",
+          3
+        ],
+        [
+          "code-generation",
+          3
+        ]
+      ]
+    },
+    {
+      "topic": "copilot",
+      "score": 6,
+      "co_occurs_with": [
+        [
+          "code-generation",
+          2
+        ],
+        [
+          "ai-coding-assistant",
+          2
+        ],
+        [
+          "coding-assistant",
+          2
+        ]
+      ]
+    },
+    {
+      "topic": "json",
+      "score": 6,
+      "co_occurs_with": [
+        [
+          "code-generation",
+          6
+        ]
+      ]
+    },
+    {
+      "topic": "gpt",
+      "score": 6,
+      "co_occurs_with": [
+        [
+          "code-generation",
+          2
+        ],
+        [
+          "code-assistant",
+          2
+        ],
+        [
+          "coding-assistant",
+          2
+        ]
+      ]
+    },
+    {
+      "topic": "compiler",
+      "score": 6,
+      "co_occurs_with": [
+        [
+          "code-generation",
+          6
+        ]
+      ]
+    },
+    {
+      "topic": "generator",
+      "score": 6,
+      "co_occurs_with": [
+        [
+          "code-generation",
+          6
+        ]
+      ]
+    },
+    {
+      "topic": "agentic-workflow",
+      "score": 6,
+      "co_occurs_with": [
+        [
+          "agentic-coding",
+          6
+        ]
+      ]
+    },
+    {
+      "topic": "generative-ai",
+      "score": 6,
+      "co_occurs_with": [
+        [
+          "code-generation",
+          3
+        ],
+        [
+          "coding-assistant",
+          3
+        ]
+      ]
+    },
+    {
+      "topic": "coding-agent",
+      "score": 5,
+      "co_occurs_with": [
+        [
+          "agentic-coding",
+          3
+        ],
+        [
+          "coding-assistant",
+          2
+        ]
+      ]
+    },
+    {
+      "topic": "vscode",
+      "score": 5,
+      "co_occurs_with": [
+        [
+          "ai-developer-tools",
+          2
+        ],
+        [
+          "code-assistant",
+          3
+        ]
+      ]
+    },
+    {
+      "topic": "automation",
+      "score": 5,
+      "co_occurs_with": [
+        [
+          "agentic-coding",
+          2
+        ],
+        [
+          "code-generation",
+          3
+        ]
+      ]
+    },
+    {
+      "topic": "performance",
+      "score": 5,
+      "co_occurs_with": [
+        [
+          "code-generation",
+          5
+        ]
+      ]
+    },
+    {
+      "topic": "large-language-models",
+      "score": 5,
+      "co_occurs_with": [
+        [
+          "code-generation",
+          5
+        ]
+      ]
+    },
+    {
+      "topic": "multi-agent",
+      "score": 5,
+      "co_occurs_with": [
+        [
+          "coding-assistant",
+          3
+        ],
+        [
+          "agentic-coding",
+          2
+        ]
+      ]
+    },
+    {
+      "topic": "github-copilot",
+      "score": 5,
+      "co_occurs_with": [
+        [
+          "ai-coding-assistant",
+          3
+        ],
+        [
+          "coding-assistant",
+          2
+        ]
+      ]
+    },
+    {
+      "topic": "spec-driven-development",
+      "score": 4,
+      "co_occurs_with": [
+        [
+          "code-generation",
+          2
+        ],
+        [
+          "agentic-coding",
+          2
+        ]
+      ]
+    },
+    {
+      "topic": "vscode-extension",
+      "score": 4,
+      "co_occurs_with": [
+        [
+          "ai-developer-tools",
+          2
+        ],
+        [
+          "code-generation",
+          2
+        ]
+      ]
+    },
+    {
+      "topic": "csharp",
+      "score": 4,
+      "co_occurs_with": [
+        [
+          "code-generation",
+          4
+        ]
+      ]
+    },
+    {
+      "topic": "web",
+      "score": 4,
+      "co_occurs_with": [
+        [
+          "code-generation",
+          4
+        ]
+      ]
+    }
+  ],
+  "clusters": [
+    [
+      "motion-planning",
+      "large-language-models",
+      "emacs-lisp",
+      "claude-ai",
+      "computer-vision",
+      "prisma",
+      "swiftui",
+      "code-completion",
+      "nextjs",
+      "ai-assistant",
+      "codegen",
+      "vibecoding",
+      "deep-learning",
+      "agentic-rag",
+      "tmux",
+      "claude-api",
+      "codex-cli",
+      "gemini",
+      "android",
+      "rlhf",
+      "data",
+      "langchain",
+      "postgresql",
+      "aiagent",
+      "deepseek-r1",
+      "mcp-tools",
+      "tool",
+      "claude-desktop",
+      "hacktoberfest",
+      "ai-engineering",
+      "instruction-tuning",
+      "programming",
+      "code-analysis",
+      "sonnet",
+      "ast",
+      "turborepo",
+      "unity",
+      "qwen",
+      "llm-agent",
+      "gpt-4o",
+      "developer-tools",
+      "llama",
+      "code-generation",
+      "claudecode",
+      "claude-code",
+      "chatbot",
+      "multi-agent-system",
+      "ai-coding-tools",
+      "spec-driven-development",
+      "openai-api",
+      "ai-agents-framework",
+      "prompt-toolkit",
+      "game-development",
+      "ralph-loop",
+      "cli-tool",
+      "gcp",
+      "game-engine",
+      "list",
+      "tutorial",
+      "rest",
+      "local-llm",
+      "optimal-control",
+      "a2a",
+      "resources",
+      "gpt-3",
+      "crud",
+      "linux",
+      "artificial-intelligence",
+      "lmstudio",
+      "code-generator",
+      "go",
+      "cpp",
+      "ralph-wiggum",
+      "coding-assistant",
+      "agentic-framework",
+      "devtools",
+      "json",
+      "agentic-ai",
+      "agents",
+      "openrouter",
+      "tutorials",
+      "codex",
+      "ai-agents",
+      "workflow-automation",
+      "aiagentframework",
+      "coding",
+      "workflow",
+      "code-search",
+      "llvm",
+      "figma",
+      "gpt4",
+      "huggingface",
+      "embeddings",
+      "code",
+      "llms",
+      "windsurf",
+      "svelte",
+      "react",
+      "ai-coding-assistant",
+      "claude-4",
+      "vue",
+      "csharp",
+      "frontend",
+      "google",
+      "typescript",
+      "performance",
+      "sub-agents",
+      "desktop-app",
+      "python3",
+      "clawdbot",
+      "dotnet",
+      "deep-neural-networks",
+      "llmops",
+      "ai-code-review",
+      "semantic-search",
+      "chat",
+      "antigravity",
+      "autonomous-agents",
+      "rag",
+      "subagents",
+      "gpt-4",
+      "in-context-learning",
+      "dotnet-core",
+      "lists",
+      "generator",
+      "text-to-image",
+      "java",
+      "rust",
+      "agi",
+      "github-copilot",
+      "claudecode-config",
+      "gamedev",
+      "ai-developer-tools",
+      "javascript",
+      "langgraph",
+      "natural-language-processing",
+      "gui",
+      "microservice",
+      "ocr",
+      "ai-memory",
+      "coding-agents",
+      "cli",
+      "openai",
+      "transformers",
+      "cursor",
+      "code-quality",
+      "rpc",
+      "workflows",
+      "agentic-coding",
+      "papers",
+      "assistant",
+      "agentic-workflow",
+      "ml",
+      "orchestration",
+      "mysql",
+      "ai",
+      "gpt-5",
+      "automation",
+      "chain-of-thought",
+      "machine-learning",
+      "code-assistant",
+      "sandbox",
+      "ai-code-reviewer",
+      "electron",
+      "vscode-extension",
+      "ai-agent",
+      "prompt-engineering",
+      "skills",
+      "chatgpt-api",
+      "awesome",
+      "vision",
+      "github",
+      "clawd",
+      "copilot",
+      "knowledge-graph",
+      "lovable",
+      "graphql",
+      "genai",
+      "tailwindcss",
+      "mlops",
+      "robotics",
+      "code-review",
+      "reinforcement-learning",
+      "openclaw",
+      "n8n",
+      "framework",
+      "vscode",
+      "task-manager",
+      "ollama",
+      "llamacpp",
+      "git",
+      "tui",
+      "compiler",
+      "library",
+      "kotlin",
+      "nlp",
+      "multi-agent-systems",
+      "microservices",
+      "openapi",
+      "model-context-protocol",
+      "mcp-server",
+      "codegenerator",
+      "game",
+      "prompts",
+      "anthropic",
+      "terminal",
+      "information-retrieval",
+      "open-source",
+      "self-hosted",
+      "ai-coding",
+      "low-code",
+      "survey",
+      "c-sharp",
+      "retrieval-augmented-generation",
+      "tauri",
+      "ai-framework",
+      "opencode",
+      "awesome-list",
+      "data-science",
+      "claude-code-skills",
+      "llm-inference",
+      "c",
+      "ide",
+      "golang",
+      "claude-code-cli",
+      "agent-skills",
+      "autonomous-coding",
+      "cursor-ai",
+      "llm",
+      "generative-ai",
+      "ai-tools",
+      "metaprogramming",
+      "language-model",
+      "claude-skills",
+      "aws",
+      "vibe-coding",
+      "gpt",
+      "python",
+      "large-language-model",
+      "amp",
+      "multimodal",
+      "wasm",
+      "ai-development",
+      "aiagents",
+      "code-understanding",
+      "agentic",
+      "mcp-servers",
+      "claude-code-plugin",
+      "visual-studio-code",
+      "neovim",
+      "llm-framework",
+      "parser",
+      "tools",
+      "coding-agent",
+      "agent",
+      "web",
+      "commands",
+      "emacs",
+      "claudecode-subagents",
+      "anthropic-claude",
+      "claude",
+      "deepseek",
+      "command-line",
+      "context-engineering",
+      "scala",
+      "search-engine",
+      "prompt-tuning",
+      "nodejs",
+      "mlx",
+      "mcp-client",
+      "mongodb",
+      "swift",
+      "awesome-lists",
+      "aider",
+      "mcp",
+      "api",
+      "software-engineering",
+      "productivity",
+      "chatgpt",
+      "software-development",
+      "vector-database",
+      "deeplearning",
+      "ai-pair-programming",
+      "static-analysis",
+      "llama3",
+      "gemini-cli",
+      "benchmark",
+      "shell",
+      "agent-framework",
+      "openai-codex",
+      "vlm",
+      "prompt",
+      "optimization",
+      "azure",
+      "multi-agent"
+    ]
+  ]
+}
