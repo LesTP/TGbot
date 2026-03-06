@@ -21,6 +21,18 @@
 
 **Issues:** None.
 
+## Phase 1 — Completion
+**Date:** 2026-03-06
+
+**Summary:** Discovery module complete. 7 of 8 steps implemented, 108 tests passing. All source files in `src/discovery/`, all tests in `tests/discovery/`.
+
+**Deferred:** Step 8 (integration test against real GitHub API) — requires `GITHUB_TOKEN`. Write this before first real pipeline run.
+
+**Contract changes propagated:**
+- ARCH_discovery.md: `CategoryConfig` updated to richer shape (topics, keywords, expansion_topics, seed_repos, quality filters). `pushed_at` added to `DiscoveredRepo.source_metadata`.
+
+**DEVLOG learning review:** No trial-and-error patterns to promote to Gotchas. `pytest.ini` solved the PYTHONPATH issue before it could become recurring.
+
 ## Step 7 — discover_repos integration
 **Date:** 2026-03-06
 
