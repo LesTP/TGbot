@@ -53,18 +53,6 @@ def _make_config(
     )
 
 
-def _mock_provider_call(content="Generated summary text.", model="claude-sonnet-4-5-20250929",
-                         input_tokens=1000, output_tokens=500):
-    """Return a function that creates a mock provider with preset response."""
-    def call(self_or_model, system_prompt=None, user_prompt=None, max_tokens=None, **kwargs):
-        # Handle both positional and keyword args
-        return {
-            "content": content,
-            "model": model,
-            "usage": {"input_tokens": input_tokens, "output_tokens": output_tokens},
-        }
-    return call
-
 
 # ---------------------------------------------------------------------------
 # generate_deep_dive
@@ -136,8 +124,6 @@ class TestGenerateDeepDive:
             mock_prompt.return_value = ("system", "user")
             generate_deep_dive(_make_repo(), _make_config(), recent_context=context)
             mock_prompt.assert_called_once()
-            _, kwargs = mock_prompt.call_args
-            # recent_context could be positional or keyword
             call_args = mock_prompt.call_args
             assert context in call_args.args or call_args.kwargs.get("recent_context") == context
 

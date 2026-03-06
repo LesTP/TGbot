@@ -36,11 +36,20 @@
 - `build_quick_hit_prompt(repo) -> (system, user)` — same metadata + README, no context parameter
 
 **Design choices:**
-- Two separate system prompt strings for deep dive (with/without context) rather than conditional string building inside one template. Easier to read and tune independently.
 - `_format_repo_metadata` selectively includes fields — omits Description when None, includes topics as comma-separated. Only surfaces what the LLM needs.
 - README truncation at `MAX_README_CHARS = 15000` with `[README truncated]` marker appended after the cut.
 
 **Tests:** 24 tests in `tests/summarization/test_prompts.py`. 276 total suite passing.
+
+**Issues:** None.
+
+### Step 4 — Content validation (2026-03-06)
+
+**What:** Created `src/summarization/validation.py` with two functions:
+- `validate_repo_content(repo)` — raises `InsufficientContentError` if `raw_content` is empty or below `MIN_CONTENT_LENGTH` (100 chars). Error carries `content_length` for diagnostics.
+- `parse_llm_response(raw_response)` — extracts `(content_text, token_usage)` from normalized provider response dict. Raises `LLMResponseError` for missing/empty/whitespace-only content. Defaults missing usage fields to 0 (usage is for cost tracking, not correctness).
+
+**Tests:** 16 tests in `tests/summarization/test_validation.py`. 292 total suite passing.
 
 **Issues:** None.
 
@@ -61,12 +70,38 @@ Pipeline: `validate_repo_content` → `build_*_prompt` → `create_provider` →
 
 **Issues:** None.
 
-### Step 4 — Content validation (2026-03-06)
+### Step 6 — Module init and exports (2026-03-06)
 
-**What:** Created `src/summarization/validation.py` with two functions:
-- `validate_repo_content(repo)` — raises `InsufficientContentError` if `raw_content` is empty or below `MIN_CONTENT_LENGTH` (100 chars). Error carries `content_length` for diagnostics.
-- `parse_llm_response(raw_response)` — extracts `(content_text, token_usage)` from normalized provider response dict. Raises `LLMResponseError` for missing/empty/whitespace-only content. Defaults missing usage fields to 0 (usage is for cost tracking, not correctness).
+**What:** Updated `src/summarization/__init__.py` with all 9 public exports: `generate_deep_dive`, `generate_quick_hit`, `LLMConfig`, `SummaryResult`, `LLMAPIError`, `LLMResponseError`, `InsufficientContentError`, `LLMProvider`, `create_provider`.
 
-**Tests:** 16 tests in `tests/summarization/test_validation.py`. 292 total suite passing.
+**Tests:** 3 tests in `tests/summarization/test_init.py`. 310 total suite passing.
 
 **Issues:** None.
+
+### Step 7 — Integration test (deferred)
+
+Deferred until `ANTHROPIC_API_KEY` is available. Same pattern as Discovery and Storage deferred integration tests.
+
+### Phase Review (2026-03-06)
+
+**Review findings and fixes:**
+- ARCH_summarization.md was stale — signatures missing `LLMConfig`, `recent_context`, provider-agnostic design. Updated to match implementation.
+- Duplicate system prompt strings in `prompts.py` consolidated into shared template with `{context_instruction}` placeholder.
+- Dead `_mock_provider_call` helper and unused `_, kwargs` unpacking removed from `test_summarize.py`.
+
+### Contract Changes
+
+- **ARCH_summarization.md**: Updated `generate_deep_dive` signature to include `config: LLMConfig` and `recent_context: list[dict] | None`. Updated `generate_quick_hit` signature to include `config: LLMConfig`. Added `LLMConfig` spec under Inputs. Added Provider Abstraction section. Updated Usage Example. Changed Purpose from "Anthropic API" to "provider-agnostic LLM interface".
+- **ARCH_orchestrator.md** (updated during planning, before Phase 1): Added `context_lookback_days` to `PipelineConfig`, added pipeline step 6 (query recent summaries), noted `get_recent_summaries` as new Storage dependency.
+
+### Phase 1 Complete (2026-03-06)
+
+**Summary:** Summarization module fully implemented (Steps 1-6), Step 7 deferred. 95 module tests, 310 total suite passing. Provider-agnostic LLM client with Anthropic implementation. Recent-context parameter wired into API and prompt templates, ready for Orchestrator Full to exercise.
+
+**Files:**
+- `src/summarization/types.py` — LLMConfig, SummaryResult, 3 error types
+- `src/summarization/client.py` — LLMProvider ABC, AnthropicProvider, create_provider factory
+- `src/summarization/prompts.py` — prompt builders with README truncation and recent-context
+- `src/summarization/validation.py` — content validation and response parsing
+- `src/summarization/summarize.py` — generate_deep_dive, generate_quick_hit
+- `src/summarization/__init__.py` — 9 public exports

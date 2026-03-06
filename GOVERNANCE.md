@@ -47,13 +47,13 @@ Every module maintains two files:
 - **Focus** — what's being built right now
 - **Blocked/Broken** — anything preventing progress
 
-**DEVPLAN cleanup rule:** When a phase completes, reduce each step's section to a one-line summary with a DEVLOG reference. Keep the step list scannable but remove detailed work items, test specs, and decision rationale (those live in the DEVLOG). The DEVPLAN should get *shorter* as work progresses.
+**DEVPLAN cleanup rule:** When a phase completes, reduce each step to a one-line summary with a DEVLOG reference. Keep the step list scannable but remove detailed work items, test specs, and decision rationale (those live in the DEVLOG). The DEVPLAN should get *shorter* as work progresses.
 
 ### Decision Log
 
 ```
 D-#: [Title]
-Date: YYYY-MM-DD | Status: Open | Closed 
+Date: YYYY-MM-DD | Status: Open | Closed
 Priority: Critical | Important | Nice-to-have
 Decision:
 Rationale:
@@ -214,9 +214,11 @@ Hard-won rules that prevent specific failure modes.
 
 Do not commit until human explicitly confirms. "Tests pass" is necessary but not sufficient — especially for Refine work, documentation, and cross-cutting changes.
 
+Invoking `/step-done` constitutes explicit confirmation for step-level commits. Phase completion, contract propagation, and cross-cutting changes still require separate confirmation.
+
 ### Commit Discipline
 
-**Commit vs amend:** "Commit" means create a new commit. "Amend" means modify the previous commit. Default to NEW commit. Only amend when human explicitly says "amend." 
+**Commit vs amend:** "Commit" means create a new commit. "Amend" means modify the previous commit. Default to NEW commit. Only amend when human explicitly says "amend."
 
 **Commit cadence:** One commit per logical unit, not per session. If a session covers visual design + data changes + API cleanup, those are three separate commits.
 

@@ -54,7 +54,7 @@ def _format_recent_context(recent_context: list[dict]) -> str:
     return "\n".join(lines)
 
 
-_DEEP_DIVE_SYSTEM = """\
+_DEEP_DIVE_SYSTEM_BASE = """\
 You are a technical analyst writing for developers who actively work with \
 coding tools and want to stay current with emerging alternatives. Your \
 audience is experienced — skip basic explanations and focus on what makes \
@@ -67,6 +67,7 @@ must cover:
 3. **Comparison to Alternatives** — How does it differ from similar tools?
 4. **Target Audience** — Who should consider using this, and when?
 
+{context_instruction}\
 Guidelines:
 - Length: 500-1000 words
 - Be specific and technical, not vague or promotional
@@ -74,29 +75,18 @@ Guidelines:
 - Use the repo metadata (stars, language, creation date) for context, not as quality signals\
 """
 
-_DEEP_DIVE_SYSTEM_WITH_CONTEXT = """\
-You are a technical analyst writing for developers who actively work with \
-coding tools and want to stay current with emerging alternatives. Your \
-audience is experienced — skip basic explanations and focus on what makes \
-this tool distinctive.
-
-Write a deep-dive analysis of the given GitHub repository. Your analysis \
-must cover:
-1. **Problem Solved** — What specific problem does this tool address?
-2. **Approach & Architecture** — How does it work? What's the technical approach?
-3. **Comparison to Alternatives** — How does it differ from similar tools?
-4. **Target Audience** — Who should consider using this, and when?
-
+_CONTEXT_INSTRUCTION = """\
 You are also provided with summaries of recently covered repositories. \
 Reference them where a direct comparison adds value for the reader, but \
 do not force comparisons. The focus is on the current repository.
 
-Guidelines:
-- Length: 500-1000 words
-- Be specific and technical, not vague or promotional
-- If the README lacks detail on a topic, say so rather than speculating
-- Use the repo metadata (stars, language, creation date) for context, not as quality signals\
 """
+
+
+def _build_deep_dive_system(has_context: bool) -> str:
+    """Build the deep-dive system prompt, with or without context instruction."""
+    instruction = _CONTEXT_INSTRUCTION if has_context else ""
+    return _DEEP_DIVE_SYSTEM_BASE.format(context_instruction=instruction)
 
 _QUICK_HIT_SYSTEM = """\
 You are a technical writer creating brief summaries of GitHub repositories \
@@ -129,10 +119,10 @@ def build_deep_dive_prompt(
     user_parts = [metadata, "", "## README", "", readme]
 
     if recent_context:
-        system = _DEEP_DIVE_SYSTEM_WITH_CONTEXT
+        system = _build_deep_dive_system(has_context=True)
         user_parts.extend(["", _format_recent_context(recent_context)])
     else:
-        system = _DEEP_DIVE_SYSTEM
+        system = _build_deep_dive_system(has_context=False)
 
     return system, "\n".join(user_parts)
 
