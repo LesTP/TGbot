@@ -114,7 +114,7 @@ Lessons learned during environment investigation. Reference these when setting u
 ## Change History
 | Date | What Changed | Why |
 |------|-------------|-----|
-| 2025-03-04 | Initial extraction from SPEC.md | Retrofitting existing spec into framework. Batch/queue moved to deferred flexible scope. Hosting flagged as must-resolve. Source-agnostic extension point added. |
+| 2026-03-04 | Initial extraction from SPEC.md | Retrofitting existing spec into framework. Batch/queue moved to deferred flexible scope. Hosting flagged as must-resolve. Source-agnostic extension point added. |
 | 2026-03-05 | Hosting viability verified | SSH tested, Python 3.11 confirmed, venv/pip work, outbound HTTPS works, cron via web UI works. Risk resolved. |
 | 2026-03-05 | GitHub search coverage verified | 1,373 unique repos found, 853 high-quality. Volume exceeds requirements. Seed list recommended for known tools with poor tagging. Risk resolved. |
 | 2026-03-05 | Added Setup Gotchas section | Documented environment-specific issues and workarounds discovered during investigation. |

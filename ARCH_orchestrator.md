@@ -11,13 +11,13 @@ Coordinate the daily digest pipeline: discover repos, filter out recently featur
   - config: PipelineConfig
     ```
     PipelineConfig:
-      category: CategoryConfig        # from Discovery contract
-      ranking_criteria: str            # today's ranking (or auto-rotate)
-      deep_dive_count: int             # default 1
-      quick_hit_count: int             # default 3
-      discovery_limit: int             # how many to discover (default 20)
-      cooldown_days: int               # dedup window (default 90)
-      channel_id: str                  # Telegram channel
+      category: CategoryConfig              # (ARCH_discovery)
+      ranking_criteria: RankingCriteria | None  # (ARCH_discovery) None = auto-rotate by day
+      deep_dive_count: int                   # default 1
+      quick_hit_count: int                   # default 3
+      discovery_limit: int                   # how many to discover (default 20)
+      cooldown_days: int                     # dedup window (default 90)
+      channel_id: str                        # Telegram channel
     ```
 - **Returns:** PipelineResult summarizing what happened.
   ```
@@ -32,23 +32,30 @@ Coordinate the daily digest pipeline: discover repos, filter out recently featur
 - **Errors:** Does not raise — captures all errors in PipelineResult.errors and logs them. Returns success=False if the pipeline cannot complete (e.g., no eligible repos, all summarizations fail, delivery fails).
 
 ### Pipeline Steps (internal sequence)
-1. Call `Discovery.discover_repos(category, ranking, limit)` → DiscoveredRepo list
-2. Persist each via `Storage.save_repo()` → RepoRecord list
-3. Query `Storage.get_featured_repo_ids(cooldown_days)` → exclusion set
-4. Filter candidates: remove recently featured, select top 1 for deep dive + top 3 for quick hits
-5. Call `Summarization.generate_deep_dive()` for the deep-dive candidate
-6. Call `Summarization.generate_quick_hit()` for each quick-hit candidate
-7. Persist summaries via `Storage.save_summary()`
-8. Assemble Digest object
-9. Call `Delivery.send_digest(digest, channel_id)`
-10. If delivery succeeds, call `Storage.record_feature()` for each featured repo
-11. Return PipelineResult
+1. Resolve ranking: if `config.ranking_criteria` is None, call `get_todays_ranking(today)` to determine it
+2. Call `Discovery.discover_repos(category, ranking, discovery_limit)` → DiscoveredRepo list (already ranked)
+3. Persist each via `Storage.save_repo()` → RepoRecord list
+4. Query `Storage.get_featured_repo_ids(cooldown_days)` → exclusion set
+5. Filter candidates: remove recently featured from the ranked list, select top `deep_dive_count` for deep dive + next `quick_hit_count` for quick hits
+6. Call `Summarization.generate_deep_dive()` for each deep-dive candidate
+7. Call `Summarization.generate_quick_hit()` for each quick-hit candidate
+8. Persist summaries via `Storage.save_summary()` (pass `summary_type` as str: `"deep"` or `"quick"`)
+9. Assemble Digest object
+10. Call `Delivery.send_digest(digest, channel_id)`
+11. If delivery succeeds, call `Storage.record_feature()` for each featured repo (pass `feature_type` as str: `"deep"` or `"quick"`, `ranking_criteria` as `RankingCriteria.value`)
+12. Return PipelineResult
 
 ### get_todays_ranking
-- **Signature:** `get_todays_ranking(date: date) -> str`
+- **Signature:** `get_todays_ranking(date: date) -> RankingCriteria`
 - **Parameters:** date — the current date
-- **Returns:** Ranking criteria string based on day-of-week rotation: Monday=stars, Tuesday=activity, Wednesday=forks, Thursday=recency, Friday=subscribers. Saturday/Sunday=stars (default fallback).
+- **Returns:** RankingCriteria based on day-of-week rotation: Monday=stars, Tuesday=activity, Wednesday=forks, Thursday=recency, Friday=subscribers. Saturday/Sunday=stars (default fallback).
 - **Errors:** None.
+
+## Cross-Module Types Used
+- **CategoryConfig**, **RankingCriteria**, **DiscoveredRepo** — from ARCH_discovery
+- **RepoRecord**, **SummaryRecord**, **FeatureRecord**, **StorageError** — from ARCH_storage
+
+**Type boundary note:** Storage accepts plain strings for `summary_type` (`"deep"` | `"quick"`), `feature_type` (`"deep"` | `"quick"`), and `ranking_criteria` (e.g. `"stars"`). Orchestrator uses Discovery's `RankingCriteria` enum internally and passes `.value` when calling Storage.
 
 ## Inputs
 - PipelineConfig (from environment/config + cron invocation)
@@ -64,8 +71,8 @@ No persistent state of its own. All state flows through Storage. Pipeline config
 
 ## Usage Example
 ```python
-# main.py — the cron entry point
 from orchestrator import run_daily_pipeline, get_todays_ranking
+from discovery.types import CategoryConfig, SeedRepo, RankingCriteria
 from config import load_pipeline_config
 from datetime import date
 
@@ -79,6 +86,5 @@ if result.success:
           f"{result.summaries_generated} summarized, delivered.")
 else:
     print(f"Pipeline failed: {result.errors}")
-    # Exit with non-zero for cron alerting
     exit(1)
 ```
