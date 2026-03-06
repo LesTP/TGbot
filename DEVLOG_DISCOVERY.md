@@ -21,6 +21,27 @@
 
 **Issues:** None.
 
+## Step 7 — discover_repos integration
+**Date:** 2026-03-06
+
+**What was done:**
+- Created `src/discovery/discover.py` with `discover_repos()` — the public API wiring all components
+- Pipeline: search → dedup → pre-filter (stars/fork/archived) → fetch READMEs → full filter → fetch seeds → merge → dedup → sort → limit → convert to DiscoveredRepo
+- Pre-filter optimization: checks stars/fork/archived before README fetch to avoid unnecessary API calls
+- Maps `RankingCriteria` → GitHub search sort parameter for better initial results
+- Token falls back to `GITHUB_TOKEN` env var
+- Updated `__init__.py` to re-export `discover_repos`
+- Created `tests/discovery/test_discover_repos.py` with 18 tests (happy path, dedup, filtering, expansion, seeds, errors, keywords)
+
+**Decisions:**
+- Pre-filter before README fetch. At 10-15 queries × 30 results = ~300 raw repos, fetching all READMEs would be wasteful. Pre-filtering by stars/fork/archived first typically cuts this by 30-50%.
+- `_is_expansion` tag carried on raw dicts to route expansion repos through higher star bar during filtering, rather than splitting queries into separate pipelines.
+
+### Contract Changes
+- **ARCH_discovery.md**: Added `pushed_at: str (ISO 8601)` to `DiscoveredRepo.source_metadata`. Needed for `RankingCriteria.ACTIVITY` sorting.
+
+**Issues:** None.
+
 ## Step 6 — Seed repo handling
 **Date:** 2026-03-06
 

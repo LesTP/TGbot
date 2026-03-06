@@ -17,7 +17,7 @@
 ## Current Status
 
 **Phase:** 1 — Discovery implementation
-**Focus:** Step 7 — discover_repos integration
+**Focus:** Step 8 — Integration test (skippable)
 **Blocked/Broken:** Nothing.
 
 ---

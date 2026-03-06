@@ -62,6 +62,7 @@ DiscoveredRepo:
     primary_language: str | None
     created_at: str (ISO 8601)
     updated_at: str (ISO 8601)
+    pushed_at: str (ISO 8601)
     topics: list[str]
 ```
 
