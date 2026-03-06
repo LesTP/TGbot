@@ -47,7 +47,7 @@ Every module maintains two files:
 - **Focus** — what's being built right now
 - **Blocked/Broken** — anything preventing progress
 
-**DEVPLAN cleanup rule:** When a phase completes, reduce its section to a one-line summary with a DEVLOG reference. The DEVPLAN should get *shorter* as work progresses.
+**DEVPLAN cleanup rule:** When a phase completes, reduce each step's section to a one-line summary with a DEVLOG reference. Keep the step list scannable but remove detailed work items, test specs, and decision rationale (those live in the DEVLOG). The DEVPLAN should get *shorter* as work progresses.
 
 ### Decision Log
 
