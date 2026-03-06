@@ -6,7 +6,6 @@ and atomically updates the repo's feature tracking fields.
 """
 
 from datetime import date, datetime
-from typing import Optional
 
 from storage import db
 from storage.types import FeatureRecord, StorageError
@@ -48,21 +47,16 @@ def record_feature(
         # Verify repo exists
         if engine == "sqlite":
             cursor = conn.execute(
-                "SELECT id, first_featured_at FROM repos WHERE id = ?",
-                (repo_id,),
+                "SELECT id FROM repos WHERE id = ?", (repo_id,),
             )
         else:
-            cursor = conn.cursor(dictionary=True)
+            cursor = conn.cursor()
             cursor.execute(
-                "SELECT id, first_featured_at FROM repos WHERE id = %s",
-                (repo_id,),
+                "SELECT id FROM repos WHERE id = %s", (repo_id,),
             )
 
-        row = cursor.fetchone()
-        if row is None:
+        if cursor.fetchone() is None:
             raise ValueError(f"repo_id {repo_id} does not exist.")
-
-        is_first_feature = row["first_featured_at"] is None
 
         # Insert feature history record
         if engine == "sqlite":
@@ -72,6 +66,16 @@ def record_feature(
                 (repo_id, feature_type, today.isoformat(), ranking_criteria),
             )
             feature_id = cursor.lastrowid
+
+            # Update repo: COALESCE preserves first_featured_at if already set
+            conn.execute(
+                "UPDATE repos SET "
+                "first_featured_at = COALESCE(first_featured_at, ?), "
+                "last_featured_at = ?, "
+                "feature_count = feature_count + 1 "
+                "WHERE id = ?",
+                (now.isoformat(), now.isoformat(), repo_id),
+            )
         else:
             cursor = conn.cursor()
             cursor.execute(
@@ -81,33 +85,14 @@ def record_feature(
             )
             feature_id = cursor.lastrowid
 
-        # Update repo feature tracking
-        if is_first_feature:
-            if engine == "sqlite":
-                conn.execute(
-                    "UPDATE repos SET first_featured_at = ?, last_featured_at = ?, "
-                    "feature_count = feature_count + 1 WHERE id = ?",
-                    (now.isoformat(), now.isoformat(), repo_id),
-                )
-            else:
-                cursor.execute(
-                    "UPDATE repos SET first_featured_at = %s, last_featured_at = %s, "
-                    "feature_count = feature_count + 1 WHERE id = %s",
-                    (now, now, repo_id),
-                )
-        else:
-            if engine == "sqlite":
-                conn.execute(
-                    "UPDATE repos SET last_featured_at = ?, "
-                    "feature_count = feature_count + 1 WHERE id = ?",
-                    (now.isoformat(), repo_id),
-                )
-            else:
-                cursor.execute(
-                    "UPDATE repos SET last_featured_at = %s, "
-                    "feature_count = feature_count + 1 WHERE id = %s",
-                    (now, repo_id),
-                )
+            cursor.execute(
+                "UPDATE repos SET "
+                "first_featured_at = COALESCE(first_featured_at, %s), "
+                "last_featured_at = %s, "
+                "feature_count = feature_count + 1 "
+                "WHERE id = %s",
+                (now, now, repo_id),
+            )
 
         conn.commit()
 

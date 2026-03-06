@@ -5,8 +5,7 @@ Data types for the Storage module's public API: record shapes
 and error types. See ARCH_storage.md for contracts.
 """
 
-import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Optional
 

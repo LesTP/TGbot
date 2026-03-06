@@ -6,7 +6,6 @@ use by other storage submodules. Supports SQLite (dev/test) and
 MySQL (production) engines.
 """
 
-import os
 import sqlite3
 from pathlib import Path
 

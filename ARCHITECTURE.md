@@ -48,7 +48,7 @@ Orchestrator records [FeatureRecord] via Storage
 
 ## Coupling Notes
 
-- Discovery ↔ Storage: **loose** — mediated by Orchestrator. Discovery never imports Storage.
+- Discovery ↔ Storage: **loose** — mediated by Orchestrator. Discovery never imports Storage. Storage imports `DiscoveredRepo` type from Discovery (accepted coupling — the type is a shared domain shape, not an internal Discovery detail).
 - Summarization ↔ Storage: **loose** — simple read/write, no complex queries.
 - Delivery ↔ Summarization: **none** — no direct interaction. Both accessed by Orchestrator.
 - Orchestrator ↔ all: **tight by design** — coordinator knows all components. Acceptable.
