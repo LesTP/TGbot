@@ -53,3 +53,41 @@ Wired `src/orchestrator/__init__.py` with exports: `run_daily_pipeline`, `get_to
 **Files modified/created:**
 - `src/orchestrator/__init__.py`
 - `tests/orchestrator/test_init.py`
+
+### Step 5 — Integration test (2026-03-06)
+
+Created `tests/orchestrator/test_integration.py`. Mocks only HTTP layer (`search_repos`, `fetch_readme`, `fetch_seed_repos`). Real Discovery processing, real SQLite Storage, real Orchestrator wiring. 4 tests: end-to-end flow, persistence verification, filtering applied, discovery failure captured.
+
+4 tests, 211 total suite green.
+
+**Files created:**
+- `tests/orchestrator/test_integration.py`
+
+### Review (2026-03-06)
+
+Code review after Step 5. Found and fixed:
+- Added 4 unit tests for `_build_storage_config()` (env-var paths had zero test coverage)
+- Removed dead variable (`real_save`) in `test_partial_save_failure`
+- Removed unused import (`from datetime import date`) in `test_pipeline.py`
+
+Noted but not fixed (deferred to Phase 2):
+- `repos_discovered` semantics: currently reports saved count, not discovery count. Minor for thin orchestrator (no partial-pipeline path besides save failures). Revisit when full pipeline adds more stages.
+
+215 total tests after review cleanup.
+
+### Phase 1 Complete (2026-03-06)
+
+All 5 steps implemented. 36 orchestrator tests, 215 total suite passing.
+
+**Production files:**
+- `src/orchestrator/__init__.py` — module exports
+- `src/orchestrator/types.py` — PipelineConfig, PipelineResult
+- `src/orchestrator/ranking.py` — get_todays_ranking (day-of-week rotation)
+- `src/orchestrator/pipeline.py` — run_daily_pipeline (thin: discover → persist)
+
+**Test files:**
+- `tests/orchestrator/test_types.py` — 11 tests
+- `tests/orchestrator/test_ranking.py` — 7 tests
+- `tests/orchestrator/test_pipeline.py` — 13 tests
+- `tests/orchestrator/test_integration.py` — 4 tests
+- `tests/orchestrator/test_init.py` — 1 test

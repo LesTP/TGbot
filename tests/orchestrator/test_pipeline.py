@@ -1,6 +1,5 @@
 """Tests for run_daily_pipeline (thin) — discover and persist."""
 
-from datetime import date
 from unittest.mock import patch
 
 import pytest
@@ -13,7 +12,7 @@ from discovery.types import (
     NoResultsError,
     RankingCriteria,
 )
-from orchestrator.pipeline import run_daily_pipeline
+from orchestrator.pipeline import _build_storage_config, run_daily_pipeline
 from orchestrator.types import PipelineConfig
 from storage.types import StorageError
 
@@ -64,6 +63,48 @@ def _init_storage():
     storage.init({"engine": "sqlite", "database": ":memory:"})
     yield
     storage.close()
+
+
+# ---------------------------------------------------------------------------
+# _build_storage_config
+# ---------------------------------------------------------------------------
+
+
+class TestBuildStorageConfig:
+
+    def test_defaults_to_sqlite_memory(self):
+        with patch.dict("os.environ", {}, clear=True):
+            config = _build_storage_config()
+        assert config == {"engine": "sqlite", "database": ":memory:"}
+
+    def test_sqlite_with_db_path(self):
+        with patch.dict("os.environ", {"DB_PATH": "/tmp/test.db"}, clear=True):
+            config = _build_storage_config()
+        assert config == {"engine": "sqlite", "database": "/tmp/test.db"}
+
+    def test_mysql_config(self):
+        env = {
+            "DB_ENGINE": "mysql",
+            "DB_HOST": "localhost",
+            "DB_USER": "root",
+            "DB_PASSWORD": "secret",
+            "DB_NAME": "tgbot",
+        }
+        with patch.dict("os.environ", env, clear=True):
+            config = _build_storage_config()
+        assert config == {
+            "engine": "mysql",
+            "host": "localhost",
+            "user": "root",
+            "password": "secret",
+            "database": "tgbot",
+        }
+
+    def test_mysql_missing_env_var_raises(self):
+        env = {"DB_ENGINE": "mysql", "DB_HOST": "localhost"}
+        with patch.dict("os.environ", env, clear=True):
+            with pytest.raises(KeyError):
+                _build_storage_config()
 
 
 # ---------------------------------------------------------------------------
@@ -188,7 +229,6 @@ class TestStorageErrors:
         repos = [_make_repo(1), _make_repo(2), _make_repo(3)]
         mock_discover.return_value = repos
 
-        real_save = storage.save_repo.__wrapped__ if hasattr(storage.save_repo, '__wrapped__') else None
         call_count = 0
 
         def save_side_effect(repo):
