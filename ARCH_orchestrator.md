@@ -17,6 +17,7 @@ Coordinate the daily digest pipeline: discover repos, filter out recently featur
       quick_hit_count: int                   # default 3
       discovery_limit: int                   # how many to discover (default 20)
       cooldown_days: int                     # dedup window (default 90)
+      context_lookback_days: int             # recent summaries for LLM context (default 14)
       channel_id: str                        # Telegram channel
     ```
 - **Returns:** PipelineResult summarizing what happened.
@@ -37,13 +38,14 @@ Coordinate the daily digest pipeline: discover repos, filter out recently featur
 3. Persist each via `Storage.save_repo()` → RepoRecord list
 4. Query `Storage.get_featured_repo_ids(cooldown_days)` → exclusion set
 5. Filter candidates: remove recently featured from the ranked list, select top `deep_dive_count` for deep dive + next `quick_hit_count` for quick hits
-6. Call `Summarization.generate_deep_dive()` for each deep-dive candidate
-7. Call `Summarization.generate_quick_hit()` for each quick-hit candidate
-8. Persist summaries via `Storage.save_summary()` (pass `summary_type` as str: `"deep"` or `"quick"`)
-9. Assemble Digest object
-10. Call `Delivery.send_digest(digest, channel_id)`
-11. If delivery succeeds, call `Storage.record_feature()` for each featured repo (pass `feature_type` as str: `"deep"` or `"quick"`, `ranking_criteria` as `RankingCriteria.value`)
-12. Return PipelineResult
+6. Query `Storage.get_recent_summaries(context_lookback_days)` → recent summary context for LLM comparison/positioning
+7. Call `Summarization.generate_deep_dive()` for each deep-dive candidate, passing recent summaries as context
+8. Call `Summarization.generate_quick_hit()` for each quick-hit candidate (no recent context — too short to benefit)
+9. Persist summaries via `Storage.save_summary()` (pass `summary_type` as str: `"deep"` or `"quick"`)
+10. Assemble Digest object
+11. Call `Delivery.send_digest(digest, channel_id)`
+12. If delivery succeeds, call `Storage.record_feature()` for each featured repo (pass `feature_type` as str: `"deep"` or `"quick"`, `ranking_criteria` as `RankingCriteria.value`)
+13. Return PipelineResult
 
 ### get_todays_ranking
 - **Signature:** `get_todays_ranking(date: date) -> RankingCriteria`
@@ -54,6 +56,8 @@ Coordinate the daily digest pipeline: discover repos, filter out recently featur
 ## Cross-Module Types Used
 - **CategoryConfig**, **RankingCriteria**, **DiscoveredRepo** — from ARCH_discovery
 - **RepoRecord**, **SummaryRecord**, **FeatureRecord**, **StorageError** — from ARCH_storage
+
+**New Storage dependency (Orchestrator Full):** `Storage.get_recent_summaries(since_days)` — not yet in ARCH_storage. Must be added before Orchestrator Full implementation.
 
 **Type boundary note:** Storage accepts plain strings for `summary_type` (`"deep"` | `"quick"`), `feature_type` (`"deep"` | `"quick"`), and `ranking_criteria` (e.g. `"stars"`). Orchestrator uses Discovery's `RankingCriteria` enum internally and passes `.value` when calling Storage.
 

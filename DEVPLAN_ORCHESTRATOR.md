@@ -33,6 +33,10 @@ Steps 1–5 implemented, 36 tests passing. See DEVLOG_ORCHESTRATOR.md for full d
 
 ARCHITECTURE.md step 6. Adds pipeline steps 4–12: dedup filtering, ranking rotation, candidate selection, summarization calls, digest assembly, delivery, feature history recording.
 
-**Prerequisite:** Summarization and Delivery modules implemented (ARCHITECTURE.md steps 4–5).
+**Prerequisites:**
+- Summarization and Delivery modules implemented (ARCHITECTURE.md steps 4–5)
+- Storage: add `get_recent_summaries(since_days)` query (not yet in ARCH_storage or code)
+
+**Includes:** Recent-summary context for deep dives — Orchestrator queries recent summaries from Storage and passes them to `generate_deep_dive()` so the LLM can compare/position against recently covered repos. Lookback window is configurable via `context_lookback_days` in PipelineConfig (default 14). Quick hits skip this (too short to benefit). See ARCH_orchestrator.md step 6.
 
 **Deferred decision:** Extract environment-variable config reading into a dedicated config module. Revisit when the full pipeline shape is clear and all env vars are known.
