@@ -18,9 +18,9 @@
 
 ## Current Status
 
-**Phase:** 1 — In progress
-**Focus:** Step 5 — save_summary and get_summary
-**Blocked/Broken:** None
+**Phase:** 1 — Complete
+**Focus:** Phase complete — all 7 steps implemented, 71 tests passing
+**Blocked/Broken:** MySQL integration test deferred — requires DB_HOST env var
 
 ---
 

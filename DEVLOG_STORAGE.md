@@ -20,6 +20,61 @@
 
 **Issues:** None.
 
+## Step 5 — save_summary and get_summary
+**Date:** 2026-03-06
+
+**What was done:**
+- Created `src/storage/summaries.py` with `save_summary()` and `get_summary()`
+- `save_summary` validates repo_id existence (SELECT before INSERT) and summary_type ("deep" | "quick")
+- `_parse_datetime()` and `_row_to_summary_record()` helpers follow same pattern as repos.py
+- Created `tests/storage/test_summaries.py` with 7 tests (valid save, invalid repo_id, invalid type, special chars round-trip, unique IDs, get valid/invalid)
+
+**Decisions:**
+- Repo existence check via SELECT before INSERT rather than relying on FK constraint errors — gives a clean `ValueError` message regardless of engine. FK errors differ between SQLite and MySQL.
+
+**Issues:** None.
+
+## Step 6 — record_feature
+**Date:** 2026-03-06
+
+**What was done:**
+- Created `src/storage/features.py` with `record_feature()`
+- Inserts into feature_history, then atomically updates repo: `last_featured_at`, `feature_count + 1`, and `first_featured_at` (only on first feature)
+- Checks `first_featured_at IS NULL` to determine first-feature logic, avoiding a race with separate read+conditional
+- Validates feature_type ("deep" | "quick") and repo existence
+- Created `tests/storage/test_features.py` with 6 tests (return value, last_featured_at, feature_count increment, first_featured_at preservation, invalid type, nonexistent repo)
+
+**Decisions:**
+- `first_featured_at` set conditionally: checked via SELECT before UPDATE rather than a single `COALESCE`-based UPDATE. Keeps the logic readable and the two UPDATE paths explicit.
+
+**Issues:** None.
+
+## Step 7 — Public API wiring + integration test
+**Date:** 2026-03-06
+
+**What was done:**
+- Updated `src/storage/__init__.py` to re-export `init`, `close`, all 6 public API functions, and all 4 types via `__all__`
+- Created `tests/storage/test_integration.py` with 5 lifecycle tests:
+  1. Full pipeline: save_repo → save_summary → record_feature → get_featured_repo_ids → get_repo → get_summary
+  2. Two repos: feature one, verify other not in featured set
+  3. Upsert + feature: re-save repo after featuring, verify metadata updated but feature_count preserved
+  4. Cooldown boundary: mock date to feature 91 days ago, verify excluded from 90-day window
+  5. Summary retrieval: multiple summaries for one repo, verify both retrievable
+
+**Decisions:**
+- Cooldown boundary test uses `unittest.mock.patch` on `storage.features.date` and `storage.features.datetime` to freeze time rather than inserting raw SQL with past dates. Tests the actual code path.
+
+**Issues:** None.
+
+## Phase 1 — Completion
+**Date:** 2026-03-06
+
+**Summary:** Storage module complete. 7 steps implemented, 71 tests passing. All source files in `src/storage/`, all tests in `tests/storage/`.
+
+**Deferred:** MySQL integration test — requires `DB_HOST` env var. Write before first server deployment.
+
+**DEVLOG learning review:** No trial-and-error patterns to promote to Gotchas. The dual-engine (SQLite/MySQL) approach worked cleanly — main divergences were placeholder style (`?` vs `%s`), upsert syntax, and datetime parsing. All handled with inline branching rather than an abstraction layer.
+
 ## Step 4 — get_featured_repo_ids
 **Date:** 2026-03-06
 
