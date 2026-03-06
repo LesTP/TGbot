@@ -21,7 +21,7 @@
 ## Current Status
 
 **Phase:** 1 — In progress
-**Focus:** Step 3 — Prompt templates
+**Focus:** Step 6 — Module init and exports
 **Blocked/Broken:** Nothing
 
 ---
