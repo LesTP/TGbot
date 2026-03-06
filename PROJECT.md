@@ -99,6 +99,7 @@ Lessons learned during environment investigation. Reference these when setting u
 | Issue | Solution |
 |-------|----------|
 | `pip` not recognized | Use `py -m pip install package` instead |
+| `python -m pytest` fails (no module named pytest) | Use `py -m pytest` — the `py` launcher finds the Python that has pytest installed |
 | Unicode/emoji print errors (cp1252 codec) | Add at top of script: `sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')` |
 
 ### GitHub API

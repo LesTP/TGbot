@@ -19,7 +19,7 @@
 ## Current Status
 
 **Phase:** 1 — In progress
-**Focus:** Step 3 — save_repo and get_repo
+**Focus:** Step 5 — save_summary and get_summary
 **Blocked/Broken:** None
 
 ---
