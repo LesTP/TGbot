@@ -111,3 +111,92 @@ def format_digest(digest: Digest) -> str:
         parts.extend(["", quick_section])
 
     return "\n".join(parts)
+
+
+def truncate_for_telegram(
+    message: str, repo_url: str, max_length: int = 4096
+) -> str:
+    """Truncate a formatted message to fit Telegram's character limit.
+
+    If message is within max_length, returns it unchanged. Otherwise,
+    finds the deep dive content and truncates it at a sentence boundary
+    (or word boundary if no sentence break), appending a "Read more" link.
+
+    The truncation target is the deep dive body — the text after the
+    "View on GitHub" link line inside the DEEP DIVE section. Header,
+    metadata, and quick hits are preserved intact.
+    """
+    if len(message) <= max_length:
+        return message
+
+    read_more = f"\n\n[Read more]({escape_url(repo_url)})"
+    read_more_len = len(read_more)
+
+    # Find the deep dive content boundary: the blank line after the
+    # "View on GitHub" link, which starts the summary body.
+    link_marker = "View on GitHub]("
+    link_pos = message.find(link_marker)
+    if link_pos == -1:
+        # No recognizable structure — hard truncate
+        cut = max_length - read_more_len - 1
+        return message[:cut] + "…" + read_more
+
+    # Find the blank line after the link line (content starts after it)
+    newline_after_link = message.find("\n", link_pos)
+    if newline_after_link == -1:
+        return message
+    content_start = newline_after_link + 1
+    # Skip the blank line separator
+    if message[content_start:content_start + 1] == "\n":
+        content_start += 1
+
+    # Everything after the deep dive content (quick hits section, if any)
+    quick_hits_marker = escape_markdown(_SECTION_SEPARATOR) + "\n⚡"
+    tail_start = message.find(quick_hits_marker, content_start)
+
+    if tail_start != -1:
+        # Preserve the gap before quick hits
+        tail = "\n\n" + message[tail_start:]
+        prefix = message[:content_start]
+        body = message[content_start:tail_start].rstrip("\n")
+    else:
+        tail = ""
+        prefix = message[:content_start]
+        body = message[content_start:].rstrip("\n")
+
+    budget = max_length - len(prefix) - len("…") - read_more_len - len(tail)
+
+    if budget <= 0:
+        # Extreme case: even without body we're over limit
+        cut = max_length - read_more_len - 1
+        return message[:cut] + "…" + read_more
+
+    truncated_body = _truncate_at_boundary(body, budget)
+
+    return prefix + truncated_body + "…" + read_more + tail
+
+
+def _truncate_at_boundary(text: str, max_chars: int) -> str:
+    """Truncate text at the last sentence or word boundary within budget.
+
+    Prefers sentence boundaries ('. ' followed by a space or newline).
+    Falls back to word boundaries (space). Last resort: hard cut.
+    """
+    if len(text) <= max_chars:
+        return text
+
+    region = text[:max_chars]
+
+    # Try sentence boundary: last '. ' within budget
+    # In escaped markdown, a period is '\\.' so look for '\\. '
+    sentence_end = region.rfind("\\. ")
+    if sentence_end != -1:
+        return region[:sentence_end + 2].rstrip()
+
+    # Try word boundary
+    space_pos = region.rfind(" ")
+    if space_pos > 0:
+        return region[:space_pos].rstrip()
+
+    # Hard cut
+    return region

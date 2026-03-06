@@ -18,7 +18,7 @@
 ## Current Status
 
 **Phase:** 1 — In Progress
-**Focus:** Steps 1-3 complete, ready for Step 4 (Truncation)
+**Focus:** Steps 1-6 complete, ready for Step 7 (Integration Test — deferred)
 **Blocked/Broken:** Nothing
 
 ---

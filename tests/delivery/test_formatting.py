@@ -11,6 +11,7 @@ from delivery.formatting import (
     format_digest,
     format_link,
     format_quick_hit,
+    truncate_for_telegram,
 )
 from delivery.types import Digest, SummaryWithRepo
 
@@ -331,3 +332,88 @@ class TestFormatDigest:
         result = format_digest(_make_digest(d=date(2026, 1, 5)))
         assert "January 5, 2026" in result
         assert "January 05" not in result
+
+
+# ---------------------------------------------------------------------------
+# Step 4 tests: truncate_for_telegram
+# ---------------------------------------------------------------------------
+
+
+class TestTruncateForTelegram:
+    def _make_long_digest(self, content_length=5000):
+        """Build a formatted digest message with a deep dive body of roughly content_length chars."""
+        sentence = "This is a test sentence about a great tool\\. "
+        repeat_count = content_length // len(sentence) + 1
+        long_content = sentence * repeat_count
+        deep = _make_summary(content=long_content[:content_length])
+        digest = Digest(
+            deep_dive=deep,
+            quick_hits=[_make_summary(name="quick-1")],
+            ranking_criteria="stars",
+            date=date(2026, 3, 6),
+        )
+        return format_digest(digest)
+
+    def test_under_limit_unchanged(self):
+        short_msg = format_digest(_make_digest())
+        result = truncate_for_telegram(short_msg, "https://github.com/org/repo")
+        assert result == short_msg
+
+    def test_at_limit_unchanged(self):
+        msg = "x" * 4096
+        result = truncate_for_telegram(msg, "https://github.com/org/repo", max_length=4096)
+        assert result == msg
+
+    def test_over_limit_truncated(self):
+        msg = self._make_long_digest(5000)
+        assert len(msg) > 4096
+        result = truncate_for_telegram(msg, "https://github.com/org/repo")
+        assert len(result) <= 4096
+
+    def test_truncated_contains_read_more(self):
+        msg = self._make_long_digest(5000)
+        url = "https://github.com/org/repo"
+        result = truncate_for_telegram(msg, url)
+        assert "[Read more]" in result
+        assert url in result
+
+    def test_truncated_contains_ellipsis(self):
+        msg = self._make_long_digest(5000)
+        result = truncate_for_telegram(msg, "https://github.com/org/repo")
+        assert "…" in result
+
+    def test_truncated_preserves_header(self):
+        msg = self._make_long_digest(5000)
+        result = truncate_for_telegram(msg, "https://github.com/org/repo")
+        assert "Daily Digest" in result
+        assert "DEEP DIVE" in result
+
+    def test_truncated_preserves_quick_hits(self):
+        msg = self._make_long_digest(5000)
+        result = truncate_for_telegram(msg, "https://github.com/org/repo")
+        assert "QUICK HITS" in result
+
+    def test_prefers_sentence_boundary(self):
+        msg = self._make_long_digest(5000)
+        result = truncate_for_telegram(msg, "https://github.com/org/repo")
+        # Should end with a sentence (escaped period before ellipsis)
+        ellipsis_pos = result.find("…")
+        before_ellipsis = result[:ellipsis_pos].rstrip()
+        assert before_ellipsis.endswith("\\.") or before_ellipsis.endswith(" ")
+
+    def test_custom_max_length(self):
+        msg = self._make_long_digest(3000)
+        result = truncate_for_telegram(msg, "https://github.com/org/repo", max_length=2000)
+        assert len(result) <= 2000
+
+    def test_url_with_special_chars_escaped_in_read_more(self):
+        msg = self._make_long_digest(5000)
+        url = "https://github.com/org/repo_(v2)"
+        result = truncate_for_telegram(msg, url)
+        assert "(v2\\)" in result
+
+    def test_no_structure_hard_truncates(self):
+        msg = "a" * 5000
+        result = truncate_for_telegram(msg, "https://example.com", max_length=200)
+        assert len(result) <= 200
+        assert "[Read more]" in result

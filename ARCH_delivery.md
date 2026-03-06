@@ -6,7 +6,7 @@ Format a Digest into a Telegram message and send it. Handles message constructio
 ## Public API
 
 ### send_digest
-- **Signature:** `send_digest(digest: Digest, channel_id: str) -> DeliveryResult`
+- **Signature:** `send_digest(digest: Digest, channel_id: str, bot_token: str) -> DeliveryResult`
 - **Parameters:**
   - digest: Digest — assembled by Orchestrator
     ```
