@@ -40,6 +40,56 @@ Added pipeline steps 4–5: query feature history, filter recently featured repo
 
 **Tests:** 22 pipeline tests (was 13), 449 total suite passing (was 440).
 
+### Step 2 — Summarization calls (2026-03-06)
+
+Wired summarization into the pipeline: LLM config from env vars, recent-context conversion, deep-dive generation with fallback, quick-hit generation with skip-on-failure, and summary persistence.
+
+**New helpers (`src/orchestrator/pipeline.py`):**
+- `_build_llm_config()` — reads `ANTHROPIC_API_KEY` (required), `LLM_PROVIDER` (default "anthropic"), `LLM_DEEP_DIVE_MODEL` (default "claude-sonnet-4-5-20250929"), `LLM_QUICK_HIT_MODEL` (default "claude-3-5-haiku-20241022")
+- `_build_recent_context(summary_records)` — converts `list[SummaryRecord]` → `list[dict]` with keys `repo_name`, `summary_content`, `date`. Joins repo name via `storage.get_repo()`, falls back to `"repo-{id}"` if repo not found
+- `_generate_deep_dive_with_fallback(candidates, remaining, config, context, errors)` — tries candidates in order, on any summarization error logs and tries next. If initial candidates exhausted, tries remaining eligible repos. Returns `(repo, SummaryResult)` or `None`
+- `_generate_quick_hits(candidates, config, errors)` — generates per candidate, skips failures, returns `list[(repo, SummaryResult)]`
+
+**Pipeline steps added:**
+- Step 6: build LLM config (fails pipeline if `ANTHROPIC_API_KEY` missing)
+- Step 6b: query `storage.get_recent_summaries(context_lookback_days)`, convert to dict context for deep dive. Failure here is non-fatal (warning only, context=None)
+- Step 7: deep dive with fallback. All candidates fail → `success=False`
+- Step 8: quick hits with skip
+- Step 9: persist summaries via `storage.save_summary()`. Save failures logged but don't fail pipeline
+
+**Tests:** 41 pipeline tests (was 22) + 5 integration tests (was 4). New test classes: `TestBuildLLMConfig` (3), `TestBuildRecentContext` (3), `TestDeepDiveFallback` (4), `TestQuickHits` (3), `TestSummarizationErrors` (5), `TestRecentContextWiring` (1). All existing tests updated to mock summarization layer. 469 total suite passing (was 449).
+
+### Steps 3–4 — Digest assembly and delivery (2026-03-06)
+
+Added pipeline steps 10–11: assemble `Digest` from summarization results and repo records, deliver to Telegram via `send_digest`.
+
+**New helpers (`src/orchestrator/pipeline.py`):**
+- `_build_summary_with_repo(repo, summary_content)` — maps `RepoRecord` fields + content → `SummaryWithRepo`. Reads `stars` and `created_at` from `source_metadata` with safe `.get()` defaults (0 and "" respectively)
+- `_assemble_digest(deep_repo, deep_summary, quick_results, ranking_criteria)` — builds `Digest(deep_dive, quick_hits, ranking_criteria, date.today())`
+
+**Pipeline steps added:**
+- Step 10: assemble digest from deep dive + quick hit results
+- Step 11: read `TELEGRAM_BOT_TOKEN` from env var, call `delivery.send_digest(digest, channel_id, bot_token)`, propagate `DeliveryResult` to `PipelineResult.delivery_result`
+  - Missing bot token → `success=False`
+  - `send_digest` raises → `success=False`, `DeliveryResult(success=False, error=str(e))`
+  - `send_digest` returns failure → `success=False`, delivery_result preserved
+
+**Tests:** 51 pipeline tests (was 41) + 6 integration tests (was 5). New test classes: `TestBuildSummaryWithRepo` (2), `TestAssembleDigest` (3), `TestDeliveryErrors` (3). New: `TestHappyPath.test_digest_passed_to_delivery`, integration `test_digest_structure`. All existing tests updated with `send_digest` mock. 479 total suite passing (was 469).
+
+### Step 5 — Feature recording (2026-03-06)
+
+After successful delivery, pipeline records all featured repos via `storage.record_feature()`. Feature recording failure is non-fatal — errors captured but pipeline stays `success=True`.
+
+**Pipeline step added:**
+- Step 12: iterate `[(deep_repo, "deep")] + [(r, "quick") for r, _ in quick_results]`, call `storage.record_feature(repo.id, feature_type, ranking.value)` for each. Tracks `recorded_count` for accurate logging: `"Recorded %d/%d featured repos"`
+
+**Test updates:**
+- 4 new tests in `TestFeatureRecording`: features recorded on success (correct count via `get_featured_repo_ids`), feature types correct (deep/quick verified via direct SQL), no features on delivery failure, recording failure still succeeds
+- 4 existing `TestDedupFiltering` tests updated: first `run_daily_pipeline` now automatically records features, so dedup assertions adjusted accordingly
+- Code review fix: removed dead `with patch.dict(...): pass` block in `test_old_features_not_excluded`
+
+**Tests:** 54 pipeline tests (was 51) + 6 integration tests. 483 total suite passing (was 479).
+
 ---
 
 ## Phase 1: Thin Orchestrator (Build)

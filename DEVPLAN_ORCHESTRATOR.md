@@ -16,7 +16,7 @@
 ## Current Status
 
 **Phase:** 2 — Orchestrator Full (Build)
-**Focus:** Step 1 complete — ready for Step 2 (summarization calls)
+**Focus:** Step 5 complete — ready for Step 6 (end-to-end integration test)
 **Blocked/Broken:** Nothing
 
 ---
