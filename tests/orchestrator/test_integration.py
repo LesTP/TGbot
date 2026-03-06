@@ -72,7 +72,7 @@ class TestThinPipelineIntegration:
 
         assert result.success is True
         assert result.repos_discovered == 3
-        assert result.repos_after_dedup == 0
+        assert result.repos_after_dedup == 3
         assert result.summaries_generated == 0
         assert result.delivery_result is None
         assert result.errors == []

@@ -37,14 +37,14 @@ Orchestrator records [FeatureRecord] via Storage
 
 ## Implementation Sequence
 
-| Order | Module | Rationale |
-|-------|--------|-----------|
-| 1 | Discovery | Leaf, no dependencies. Validates GitHub search coverage (must-resolve risk). |
-| 2 | Storage | Shared dependency for downstream modules. Start thin: repo persistence + history queries. |
-| 3 | Orchestrator (thin) | Wire Discovery → Storage. First working pipeline segment — discover and persist repos. |
-| 4 | Summarization | Highest remaining uncertainty (LLM prompts, cost, response parsing). Validates before Delivery. |
-| 5 | Delivery | Completes end-to-end path. First user-visible output (Telegram message). |
-| 6 | Orchestrator (full) | Complete pipeline: dedup filtering, ranking rotation, digest assembly, feature history recording. |
+| Order | Module | Status | Rationale |
+|-------|--------|--------|-----------|
+| 1 | Discovery | ✅ Complete | Leaf, no dependencies. Validates GitHub search coverage (must-resolve risk). |
+| 2 | Storage | ✅ Complete | Shared dependency for downstream modules. Start thin: repo persistence + history queries. |
+| 3 | Orchestrator (thin) | ✅ Complete | Wire Discovery → Storage. First working pipeline segment — discover and persist repos. |
+| 4 | Summarization | ✅ Complete | Highest remaining uncertainty (LLM prompts, cost, response parsing). Validates before Delivery. |
+| 5 | Delivery | ✅ Complete | Completes end-to-end path. First user-visible output (Telegram message). |
+| 6 | Orchestrator (full) | 🔨 In Progress | Complete pipeline: dedup filtering, ranking rotation, digest assembly, feature history recording. |
 
 ## Coupling Notes
 

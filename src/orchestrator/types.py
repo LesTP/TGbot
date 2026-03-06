@@ -26,6 +26,7 @@ class PipelineConfig:
     quick_hit_count: int = 3
     discovery_limit: int = 20
     cooldown_days: int = 90
+    context_lookback_days: int = 14
 
 
 @dataclass

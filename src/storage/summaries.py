@@ -126,3 +126,41 @@ def get_summary(summary_id: int) -> Optional[SummaryRecord]:
         raise
     except Exception as e:
         raise StorageError(f"get_summary failed: {e}")
+
+
+def get_recent_summaries(since_days: int = 14) -> list[SummaryRecord]:
+    """Fetch summaries generated within the lookback window.
+
+    Returns SummaryRecords ordered by generated_at descending (newest first).
+    Empty list if none found.
+
+    Raises:
+        StorageError: Database read failed.
+    """
+    conn = db.get_connection()
+    engine = db.get_engine()
+
+    try:
+        if engine == "sqlite":
+            cursor = conn.execute(
+                "SELECT * FROM summaries "
+                "WHERE generated_at >= datetime('now', '-' || ? || ' days') "
+                "ORDER BY generated_at DESC",
+                (since_days,),
+            )
+            rows = cursor.fetchall()
+        else:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute(
+                "SELECT * FROM summaries "
+                "WHERE generated_at >= NOW() - INTERVAL %s DAY "
+                "ORDER BY generated_at DESC",
+                (since_days,),
+            )
+            rows = cursor.fetchall()
+
+        return [_row_to_summary_record(row) for row in rows]
+    except StorageError:
+        raise
+    except Exception as e:
+        raise StorageError(f"get_recent_summaries failed: {e}")

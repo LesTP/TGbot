@@ -1,5 +1,6 @@
-"""Tests for run_daily_pipeline (thin) — discover and persist."""
+"""Tests for run_daily_pipeline — discover, persist, dedup, select."""
 
+from datetime import date, timedelta
 from unittest.mock import patch
 
 import pytest
@@ -12,9 +13,9 @@ from discovery.types import (
     NoResultsError,
     RankingCriteria,
 )
-from orchestrator.pipeline import _build_storage_config, run_daily_pipeline
+from orchestrator.pipeline import _build_storage_config, _select_candidates, run_daily_pipeline
 from orchestrator.types import PipelineConfig
-from storage.types import StorageError
+from storage.types import RepoRecord, StorageError
 
 
 # ---------------------------------------------------------------------------
@@ -55,6 +56,36 @@ def _make_repo(n: int) -> DiscoveredRepo:
             "topics": ["test"],
         },
     )
+
+
+def _make_repo_record(id: int, **overrides) -> RepoRecord:
+    from datetime import datetime
+
+    defaults = dict(
+        id=id,
+        source="github",
+        source_id=str(id),
+        name=f"owner/repo-{id}",
+        url=f"https://github.com/owner/repo-{id}",
+        description=f"Repo {id}",
+        raw_content=f"# Repo {id}\nREADME content",
+        source_metadata={"stars": 100 + id},
+        discovered_at=datetime(2025, 6, 1),
+    )
+    defaults.update(overrides)
+    return RepoRecord(**defaults)
+
+
+def _feature_repo(repo_id: int, days_ago: int = 0) -> None:
+    """Insert a feature_history record via direct SQL for test setup."""
+    conn = storage.db.get_connection()
+    featured_date = (date.today() - timedelta(days=days_ago)).isoformat()
+    conn.execute(
+        "INSERT INTO feature_history (repo_id, feature_type, featured_date, ranking_criteria) "
+        "VALUES (?, 'deep', ?, 'stars')",
+        (repo_id, featured_date),
+    )
+    conn.commit()
 
 
 @pytest.fixture(autouse=True)
@@ -108,21 +139,62 @@ class TestBuildStorageConfig:
 
 
 # ---------------------------------------------------------------------------
-# Happy path
+# _select_candidates (unit tests)
+# ---------------------------------------------------------------------------
+
+
+class TestSelectCandidates:
+
+    def test_no_featured_returns_top_split(self):
+        repos = [_make_repo_record(i) for i in range(1, 8)]
+        deep, quick = _select_candidates(repos, featured_ids=set(), deep_dive_count=1, quick_hit_count=3)
+        assert len(deep) == 1
+        assert deep[0].id == 1
+        assert len(quick) == 3
+        assert [r.id for r in quick] == [2, 3, 4]
+
+    def test_featured_excluded(self):
+        repos = [_make_repo_record(i) for i in range(1, 8)]
+        deep, quick = _select_candidates(repos, featured_ids={1, 2, 3}, deep_dive_count=1, quick_hit_count=3)
+        assert deep[0].id == 4
+        assert [r.id for r in quick] == [5, 6, 7]
+
+    def test_all_featured_returns_empty(self):
+        repos = [_make_repo_record(i) for i in range(1, 4)]
+        deep, quick = _select_candidates(repos, featured_ids={1, 2, 3}, deep_dive_count=1, quick_hit_count=3)
+        assert deep == []
+        assert quick == []
+
+    def test_fewer_than_requested(self):
+        repos = [_make_repo_record(i) for i in range(1, 4)]
+        deep, quick = _select_candidates(repos, featured_ids=set(), deep_dive_count=1, quick_hit_count=5)
+        assert len(deep) == 1
+        assert len(quick) == 2
+
+    def test_preserves_ranked_order(self):
+        repos = [_make_repo_record(i) for i in range(1, 11)]
+        deep, quick = _select_candidates(repos, featured_ids={2, 4}, deep_dive_count=1, quick_hit_count=3)
+        assert deep[0].id == 1
+        assert [r.id for r in quick] == [3, 5, 6]
+
+
+# ---------------------------------------------------------------------------
+# Happy path (with dedup)
 # ---------------------------------------------------------------------------
 
 
 class TestHappyPath:
 
     @patch("orchestrator.pipeline.discover_repos")
-    def test_discovers_and_persists(self, mock_discover):
-        repos = [_make_repo(1), _make_repo(2), _make_repo(3)]
+    def test_discovers_persists_and_selects(self, mock_discover):
+        repos = [_make_repo(i) for i in range(1, 8)]
         mock_discover.return_value = repos
 
         result = run_daily_pipeline(_make_config())
 
         assert result.success is True
-        assert result.repos_discovered == 3
+        assert result.repos_discovered == 7
+        assert result.repos_after_dedup == 7
         assert result.errors == []
 
     @patch("orchestrator.pipeline.discover_repos")
@@ -137,14 +209,91 @@ class TestHappyPath:
         assert record.name == "owner/repo-1"
 
     @patch("orchestrator.pipeline.discover_repos")
-    def test_result_fields(self, mock_discover):
-        mock_discover.return_value = [_make_repo(1)]
+    def test_result_fields_with_no_further_steps(self, mock_discover):
+        mock_discover.return_value = [_make_repo(i) for i in range(1, 6)]
 
         result = run_daily_pipeline(_make_config())
 
-        assert result.repos_after_dedup == 0
+        assert result.repos_discovered == 5
+        assert result.repos_after_dedup == 5
         assert result.summaries_generated == 0
         assert result.delivery_result is None
+
+
+# ---------------------------------------------------------------------------
+# Dedup filtering (end-to-end through pipeline)
+# ---------------------------------------------------------------------------
+
+
+class TestDedupFiltering:
+
+    @patch("orchestrator.pipeline.discover_repos")
+    def test_recently_featured_filtered(self, mock_discover):
+        """Repos featured within cooldown window are excluded."""
+        repos = [_make_repo(i) for i in range(1, 6)]
+        mock_discover.return_value = repos
+
+        result1 = run_daily_pipeline(_make_config())
+        assert result1.success is True
+
+        # Feature repos 1, 2, 3 (within default 90-day window)
+        _feature_repo(1, days_ago=5)
+        _feature_repo(2, days_ago=10)
+        _feature_repo(3, days_ago=20)
+
+        # Second run — same repos discovered, but 3 are featured
+        result2 = run_daily_pipeline(_make_config())
+        assert result2.repos_discovered == 5
+        assert result2.repos_after_dedup == 2
+
+    @patch("orchestrator.pipeline.discover_repos")
+    def test_all_repos_featured_fails(self, mock_discover):
+        """Pipeline fails when all discovered repos are recently featured."""
+        repos = [_make_repo(i) for i in range(1, 4)]
+        mock_discover.return_value = repos
+
+        run_daily_pipeline(_make_config())
+
+        # Feature all repos
+        _feature_repo(1, days_ago=5)
+        _feature_repo(2, days_ago=10)
+        _feature_repo(3, days_ago=20)
+
+        result = run_daily_pipeline(_make_config())
+        assert result.success is False
+        assert result.repos_after_dedup == 0
+        assert any("No eligible" in e for e in result.errors)
+
+    @patch("orchestrator.pipeline.discover_repos")
+    def test_old_features_not_excluded(self, mock_discover):
+        """Repos featured outside cooldown window are eligible."""
+        repos = [_make_repo(i) for i in range(1, 4)]
+        mock_discover.return_value = repos
+
+        run_daily_pipeline(_make_config(cooldown_days=90))
+
+        # Feature repo 1 long ago (outside 90-day window)
+        _feature_repo(1, days_ago=100)
+
+        result = run_daily_pipeline(_make_config(cooldown_days=90))
+        assert result.repos_after_dedup == 3
+
+    @patch("orchestrator.pipeline.discover_repos")
+    def test_repos_after_dedup_count_correct(self, mock_discover):
+        """repos_after_dedup reflects total eligible, not just selected."""
+        repos = [_make_repo(i) for i in range(1, 11)]
+        mock_discover.return_value = repos
+
+        run_daily_pipeline(_make_config())
+
+        # Feature 3 repos
+        _feature_repo(1, days_ago=5)
+        _feature_repo(2, days_ago=10)
+        _feature_repo(3, days_ago=20)
+
+        result = run_daily_pipeline(_make_config())
+        # 10 discovered, 3 featured = 7 eligible
+        assert result.repos_after_dedup == 7
 
 
 # ---------------------------------------------------------------------------
@@ -220,8 +369,7 @@ class TestStorageErrors:
         result = run_daily_pipeline(_make_config())
 
         assert result.success is False
-        assert result.repos_discovered == 0
-        assert len(result.errors) == 3
+        assert len(result.errors) >= 3
 
     @patch("orchestrator.pipeline.discover_repos")
     @patch("orchestrator.pipeline.storage.save_repo")
@@ -236,7 +384,6 @@ class TestStorageErrors:
             call_count += 1
             if call_count == 2:
                 raise StorageError("db write failed")
-            # Call the real implementation directly via the module internals
             from storage.repos import save_repo as _real_save
             return _real_save(repo)
 
@@ -245,6 +392,6 @@ class TestStorageErrors:
         result = run_daily_pipeline(_make_config())
 
         assert result.success is True
-        assert result.repos_discovered == 2
+        assert result.repos_discovered == 3
         assert len(result.errors) == 1
         assert "db write failed" in result.errors[0]

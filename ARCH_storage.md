@@ -39,6 +39,12 @@ Persist and query all durable data: discovered repos, generated summaries, and f
 - **Returns:** SummaryRecord or None.
 - **Errors:** `StorageError` — read failed.
 
+### get_recent_summaries
+- **Signature:** `get_recent_summaries(since_days: int = 14) -> list[SummaryRecord]`
+- **Parameters:** since_days — lookback window (default 14)
+- **Returns:** List of SummaryRecords generated within the lookback window, ordered by `generated_at` descending (newest first). Empty list if none found.
+- **Errors:** `StorageError` — database read failed.
+
 ### record_feature
 - **Signature:** `record_feature(repo_id: int, feature_type: str, ranking_criteria: str) -> FeatureRecord`
 - **Parameters:**

@@ -1,5 +1,47 @@
 # DEVLOG: Orchestrator
 
+## Phase 2: Orchestrator Full (Build)
+
+### Step 0 — Prerequisites (2026-03-06)
+
+Added `get_recent_summaries` to Storage and `context_lookback_days` to PipelineConfig — prerequisites for the full pipeline's recent-context feature.
+
+**Storage addition:**
+- `get_recent_summaries(since_days: int = 14) -> list[SummaryRecord]` in `src/storage/summaries.py`
+- Engine-aware SQL: SQLite uses `datetime('now', '-N days')`, MySQL uses `NOW() - INTERVAL N DAY`
+- Returns summaries within lookback window, ordered `generated_at` DESC (newest first)
+- Exported from `storage/__init__.py`, added to `__all__`
+
+**PipelineConfig update:**
+- Added `context_lookback_days: int = 14` to `src/orchestrator/types.py`
+
+**Tests:** 7 new tests in `TestGetRecentSummaries` — empty list, within window, outside window, mixed, ordering, default window, multiple repos. 440 total suite passing (was 433).
+
+### Contract Changes
+- **ARCH_storage.md** — added `get_recent_summaries` function contract (new public API)
+
+### Step 1 — Dedup filtering and candidate selection (2026-03-06)
+
+Added pipeline steps 4–5: query feature history, filter recently featured repos, split eligible repos into deep-dive and quick-hit candidate pools.
+
+**Pipeline changes (`src/orchestrator/pipeline.py`):**
+- Added `_select_candidates(saved_repos, featured_ids, deep_dive_count, quick_hit_count)` — filters out recently featured repos, splits remainder into deep/quick pools preserving Discovery's ranked order
+- Step 4: query `storage.get_featured_repo_ids(config.cooldown_days)` for exclusion set
+- Step 5: filter and select candidates; pipeline returns `success=False` if no deep-dive candidates remain
+- Fixed `repos_discovered` to report `len(discovered)` instead of saved count (resolved Phase 1 deferred item)
+- `repos_after_dedup` now reports actual eligible count
+- Step 3 tracks `saved_repos` as `list[RepoRecord]` (was just a count) to feed candidate selection
+
+**Tests (`tests/orchestrator/test_pipeline.py`):**
+- 5 unit tests for `_select_candidates`: no featured, featured excluded, all featured empty, fewer than requested, preserves ranked order
+- 4 end-to-end dedup tests: recently featured filtered, all featured fails pipeline, old features not excluded, repos_after_dedup count correct
+- Updated happy-path tests for new `repos_discovered` semantics
+- Updated integration test (`repos_after_dedup` now reflects real dedup)
+
+**Tests:** 22 pipeline tests (was 13), 449 total suite passing (was 440).
+
+---
+
 ## Phase 1: Thin Orchestrator (Build)
 
 ### Step 1 — Types (2026-03-06)

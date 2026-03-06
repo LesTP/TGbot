@@ -1,11 +1,12 @@
-"""Tests for save_summary and get_summary."""
+"""Tests for save_summary, get_summary, and get_recent_summaries."""
 
 import pytest
+from datetime import datetime, timedelta
 
 from discovery.types import DiscoveredRepo
 from storage import db
 from storage.repos import save_repo
-from storage.summaries import save_summary, get_summary
+from storage.summaries import save_summary, get_summary, get_recent_summaries
 
 
 SQLITE_CONFIG = {"engine": "sqlite", "database": ":memory:"}
@@ -37,6 +38,27 @@ def setup_db():
 def repo_record():
     """Insert a repo and return its record for FK satisfaction."""
     return save_repo(_make_discovered_repo())
+
+
+def _insert_repo(conn, repo_id, source_id):
+    """Insert a minimal repo row for foreign key satisfaction."""
+    conn.execute(
+        "INSERT INTO repos (id, source, source_id, name, url, raw_content, source_metadata) "
+        "VALUES (?, 'github', ?, 'test/repo', 'https://github.com/test/repo', 'readme', '{}')",
+        (repo_id, source_id),
+    )
+    conn.commit()
+
+
+def _insert_summary(conn, repo_id, summary_type, content, days_ago):
+    """Insert a summary with generated_at = now - days_ago."""
+    generated_at = (datetime.now() - timedelta(days=days_ago)).isoformat()
+    conn.execute(
+        "INSERT INTO summaries (repo_id, summary_type, content, model_used, generated_at) "
+        "VALUES (?, ?, ?, 'test-model', ?)",
+        (repo_id, summary_type, content, generated_at),
+    )
+    conn.commit()
 
 
 class TestSaveSummary:
@@ -84,3 +106,67 @@ class TestGetSummary:
     def test_nonexistent_id(self):
         result = get_summary(9999)
         assert result is None
+
+
+class TestGetRecentSummaries:
+    """get_recent_summaries queries summaries within a lookback window."""
+
+    def test_no_summaries_returns_empty(self):
+        result = get_recent_summaries()
+        assert result == []
+
+    def test_recent_summary_returned(self):
+        conn = db.get_connection()
+        _insert_repo(conn, 1, "100")
+        _insert_summary(conn, 1, "deep", "Recent deep dive.", days_ago=3)
+        result = get_recent_summaries(since_days=14)
+        assert len(result) == 1
+        assert result[0].content == "Recent deep dive."
+        assert result[0].summary_type == "deep"
+
+    def test_old_summary_excluded(self):
+        conn = db.get_connection()
+        _insert_repo(conn, 1, "100")
+        _insert_summary(conn, 1, "deep", "Old summary.", days_ago=20)
+        result = get_recent_summaries(since_days=14)
+        assert result == []
+
+    def test_mixed_inside_and_outside_window(self):
+        conn = db.get_connection()
+        _insert_repo(conn, 1, "100")
+        _insert_repo(conn, 2, "200")
+        _insert_summary(conn, 1, "deep", "Recent.", days_ago=5)
+        _insert_summary(conn, 2, "quick", "Old.", days_ago=30)
+        result = get_recent_summaries(since_days=14)
+        assert len(result) == 1
+        assert result[0].content == "Recent."
+
+    def test_ordered_newest_first(self):
+        conn = db.get_connection()
+        _insert_repo(conn, 1, "100")
+        _insert_summary(conn, 1, "deep", "Older.", days_ago=10)
+        _insert_summary(conn, 1, "quick", "Newer.", days_ago=2)
+        result = get_recent_summaries(since_days=14)
+        assert len(result) == 2
+        assert result[0].content == "Newer."
+        assert result[1].content == "Older."
+
+    def test_default_since_days_is_14(self):
+        conn = db.get_connection()
+        _insert_repo(conn, 1, "100")
+        _insert_summary(conn, 1, "deep", "Within default.", days_ago=13)
+        _insert_summary(conn, 1, "quick", "Outside default.", days_ago=15)
+        result = get_recent_summaries()
+        assert len(result) == 1
+        assert result[0].content == "Within default."
+
+    def test_multiple_repos_all_returned(self):
+        conn = db.get_connection()
+        _insert_repo(conn, 1, "100")
+        _insert_repo(conn, 2, "200")
+        _insert_repo(conn, 3, "300")
+        _insert_summary(conn, 1, "deep", "Repo 1 deep.", days_ago=1)
+        _insert_summary(conn, 2, "quick", "Repo 2 quick.", days_ago=5)
+        _insert_summary(conn, 3, "deep", "Repo 3 deep.", days_ago=10)
+        result = get_recent_summaries(since_days=14)
+        assert len(result) == 3
