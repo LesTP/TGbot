@@ -14,6 +14,7 @@ from delivery.formatting import (
     truncate_for_telegram,
 )
 from delivery.types import Digest, SummaryWithRepo
+from tests.delivery.conftest import make_summary as _make_summary
 
 
 class TestEscapeMarkdown:
@@ -148,23 +149,8 @@ class TestFormatLink:
 
 
 # ---------------------------------------------------------------------------
-# Helpers for Step 3 tests
+# Helpers
 # ---------------------------------------------------------------------------
-
-def _make_summary(
-    name="test-repo",
-    url="https://github.com/org/test-repo",
-    stars=1234,
-    content="A great tool for testing.",
-    created_at="2024-06-15",
-):
-    return SummaryWithRepo(
-        summary_content=content,
-        repo_name=name,
-        repo_url=url,
-        stars=stars,
-        created_at=created_at,
-    )
 
 
 def _make_digest(
@@ -182,7 +168,7 @@ def _make_digest(
 
 
 # ---------------------------------------------------------------------------
-# Step 3 tests: format_deep_dive, format_quick_hit, format_digest
+# format_deep_dive, format_quick_hit, format_digest
 # ---------------------------------------------------------------------------
 
 
@@ -335,7 +321,7 @@ class TestFormatDigest:
 
 
 # ---------------------------------------------------------------------------
-# Step 4 tests: truncate_for_telegram
+# truncate_for_telegram
 # ---------------------------------------------------------------------------
 
 

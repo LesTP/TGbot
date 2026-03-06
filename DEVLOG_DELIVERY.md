@@ -106,3 +106,23 @@
 
 ### Contract Changes
 - **ARCH_delivery.md:** `send_digest` signature updated from `(digest, channel_id)` to `(digest, channel_id, bot_token)`. Bot token passed in by caller rather than read from environment.
+
+### Phase 1 Completion — Review & Cleanup (2026-03-06)
+
+**Phase result:** 6 of 7 steps implemented. Step 7 (integration test) deferred — requires TELEGRAM_BOT_TOKEN.
+
+**Final stats:** 123 delivery tests, 433 total project tests.
+
+**Review cleanup:**
+- Removed unused `_mock_successful_send` from test_send.py
+- Removed unused `Optional` import and `logger` from telegram_client.py
+- Deduplicated `_make_summary` helper into tests/delivery/conftest.py
+- Changed `List[SummaryWithRepo]` → `list[SummaryWithRepo]` in types.py
+- Updated ARCH_delivery.md usage example to include bot_token parameter
+
+**Files (final):**
+- `src/delivery/types.py` — SummaryWithRepo, Digest, DeliveryResult, TelegramAPIError, MessageTooLongError
+- `src/delivery/formatting.py` — escape_markdown, escape_url, format_link, format_deep_dive, format_quick_hit, format_digest, truncate_for_telegram
+- `src/delivery/telegram_client.py` — TelegramClient.send_message
+- `src/delivery/send.py` — send_digest (public entry point)
+- `src/delivery/__init__.py` — public exports

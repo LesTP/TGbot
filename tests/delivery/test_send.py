@@ -13,22 +13,7 @@ from delivery.types import (
     SummaryWithRepo,
     TelegramAPIError,
 )
-
-
-def _make_summary(
-    name="test-repo",
-    url="https://github.com/org/test-repo",
-    stars=1234,
-    content="A great tool for testing.",
-    created_at="2024-06-15",
-):
-    return SummaryWithRepo(
-        summary_content=content,
-        repo_name=name,
-        repo_url=url,
-        stars=stars,
-        created_at=created_at,
-    )
+from tests.delivery.conftest import make_summary as _make_summary
 
 
 def _make_digest(content="Short deep dive content."):
@@ -38,16 +23,6 @@ def _make_digest(content="Short deep dive content."):
         ranking_criteria="stars",
         date=date(2026, 3, 6),
     )
-
-
-def _mock_successful_send():
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {
-        "ok": True,
-        "result": {"message_id": 42},
-    }
-    return mock_response
 
 
 class TestSendDigestSuccess:

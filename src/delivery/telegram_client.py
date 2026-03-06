@@ -5,14 +5,9 @@ Handles HTTP interaction with Telegram's sendMessage endpoint.
 All Telegram-specific error handling lives here.
 """
 
-import logging
-from typing import Optional
-
 import requests
 
 from delivery.types import TelegramAPIError
-
-logger = logging.getLogger(__name__)
 
 TELEGRAM_API_BASE = "https://api.telegram.org"
 

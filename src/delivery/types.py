@@ -7,7 +7,7 @@ result types, and error types. See ARCH_delivery.md for contracts.
 
 from dataclasses import dataclass
 from datetime import date
-from typing import List, Optional
+from typing import Optional
 
 
 # ---------------------------------------------------------------------------
@@ -38,7 +38,7 @@ class Digest:
     """
 
     deep_dive: SummaryWithRepo
-    quick_hits: List[SummaryWithRepo]
+    quick_hits: list[SummaryWithRepo]
     ranking_criteria: str
     date: date
 

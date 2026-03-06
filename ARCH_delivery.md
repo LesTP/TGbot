@@ -50,9 +50,9 @@ None. Delivery is stateless.
 ## Usage Example
 ```python
 from delivery import send_digest
-from config import TELEGRAM_CHANNEL_ID
+from config import TELEGRAM_CHANNEL_ID, TELEGRAM_BOT_TOKEN
 
-result = send_digest(digest, channel_id=TELEGRAM_CHANNEL_ID)
+result = send_digest(digest, channel_id=TELEGRAM_CHANNEL_ID, bot_token=TELEGRAM_BOT_TOKEN)
 if result.success:
     print(f"Posted: message {result.message_id}")
 else:
