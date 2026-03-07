@@ -51,6 +51,18 @@ def format_link(text: str, url: str) -> str:
     return f"[{escape_markdown(text)}]({escape_url(url)})"
 
 
+def extract_excerpt(text: str, max_paragraphs: int = 3) -> str:
+    """Extract the first few paragraphs of text for use as an excerpt.
+
+    Splits on double-newlines (blank lines) and returns the first
+    max_paragraphs paragraphs joined by double-newlines.
+    Operates on raw text (before MarkdownV2 escaping).
+    """
+    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+    selected = paragraphs[:max_paragraphs]
+    return "\n\n".join(selected)
+
+
 def format_deep_dive(summary: SummaryWithRepo) -> str:
     """Format the deep dive section of a digest message."""
     stars_str = escape_markdown(f"{summary.stars:,}")
@@ -66,6 +78,30 @@ def format_deep_dive(summary: SummaryWithRepo) -> str:
     )
 
 
+def _format_deep_dive_with_excerpt(
+    summary: SummaryWithRepo, telegraph_url: str
+) -> str:
+    """Format the deep dive section with an excerpt and Telegraph link.
+
+    Replaces the full body with the first few paragraphs plus a
+    "Read full analysis" link to the Telegraph page.
+    """
+    stars_str = escape_markdown(f"{summary.stars:,}")
+    name = escape_markdown(summary.repo_name)
+    github_link = format_link("View on GitHub", summary.repo_url)
+    excerpt = escape_markdown(extract_excerpt(summary.summary_content))
+    read_full = f"[Read full analysis →]({escape_url(telegraph_url)})"
+
+    return (
+        f"*{name}* ⭐ {stars_str}\n"
+        f"{github_link}\n"
+        f"\n"
+        f"{excerpt}\n"
+        f"\n"
+        f"{read_full}"
+    )
+
+
 def format_quick_hit(summary: SummaryWithRepo, index: int) -> str:
     """Format a single quick hit entry with its index number."""
     stars_str = escape_markdown(f"{summary.stars:,}")
@@ -74,12 +110,13 @@ def format_quick_hit(summary: SummaryWithRepo, index: int) -> str:
     link = format_link("GitHub", summary.repo_url)
 
     return (
-        f"{index}\\. *{name}* ⭐ {stars_str} — {content}\n"
+        f"{index}\\. *{name}* ⭐ {stars_str}\n"
+        f"   {content}\n"
         f"   {link}"
     )
 
 
-def format_digest(digest: Digest) -> str:
+def format_digest(digest: Digest, telegraph_url: str | None = None) -> str:
     """Format a complete digest into a MarkdownV2 Telegram message.
 
     Layout:
@@ -88,6 +125,9 @@ def format_digest(digest: Digest) -> str:
       Deep Dive section
       Separator
       Quick Hits section (if any)
+
+    If telegraph_url is provided, the deep dive uses an excerpt with
+    a link to the full analysis on Telegraph instead of the full body.
     """
     emoji = _CRITERIA_EMOJI.get(digest.ranking_criteria, "📊")
     criteria_label = escape_markdown(digest.ranking_criteria.capitalize())
@@ -97,7 +137,10 @@ def format_digest(digest: Digest) -> str:
 
     header = f"📅 *Daily Digest* — {date_str}\nRanked by: {emoji} {criteria_label}"
 
-    deep = format_deep_dive(digest.deep_dive)
+    if telegraph_url:
+        deep = _format_deep_dive_with_excerpt(digest.deep_dive, telegraph_url)
+    else:
+        deep = format_deep_dive(digest.deep_dive)
     deep_section = f"{sep}\n🔍 *DEEP DIVE*\n{sep}\n\n{deep}"
 
     parts = [header, "", deep_section]

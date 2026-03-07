@@ -83,3 +83,12 @@ class MessageTooLongError(Exception):
         super().__init__(msg)
         self.length = length
         self.max_length = max_length
+
+
+class TelegraphAPIError(Exception):
+    """Telegraph API call failed. Non-fatal — caller falls back to truncation."""
+
+    def __init__(self, message: str, status_code: Optional[int] = None):
+        super().__init__(message)
+        self.message = message
+        self.status_code = status_code

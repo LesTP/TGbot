@@ -1,17 +1,18 @@
 """Tests for send_digest — main Delivery public function."""
 
 from datetime import date
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
-from delivery.send import send_digest, TELEGRAM_MAX_LENGTH
+from delivery.formatting import extract_excerpt
+from delivery.send import send_digest, TELEGRAM_MAX_LENGTH, TELEGRAPH_THRESHOLD
 from delivery.types import (
     DeliveryResult,
     Digest,
     MessageTooLongError,
-    SummaryWithRepo,
     TelegramAPIError,
+    TelegraphAPIError,
 )
 from tests.delivery.conftest import make_summary as _make_summary
 
@@ -23,6 +24,11 @@ def _make_digest(content="Short deep dive content."):
         ranking_criteria="stars",
         date=date(2026, 3, 6),
     )
+
+
+def _long_content():
+    """Return content exceeding TELEGRAPH_THRESHOLD."""
+    return "This is a paragraph of content. " * 80
 
 
 class TestSendDigestSuccess:
@@ -154,3 +160,221 @@ class TestSendDigestFormatting:
         sent_text = MockClient.return_value.send_message.call_args[0][1]
         assert "Unique content here" in sent_text
         assert "DEEP DIVE" in sent_text
+
+
+# ───────────────────────────────────────────────────────────────────
+# extract_excerpt
+# ───────────────────────────────────────────────────────────────────
+
+
+class TestExtractExcerpt:
+    def test_single_paragraph(self):
+        assert extract_excerpt("Hello world.") == "Hello world."
+
+    def test_three_paragraphs_returned(self):
+        text = "Para one.\n\nPara two.\n\nPara three.\n\nPara four."
+        result = extract_excerpt(text)
+        assert "Para one." in result
+        assert "Para two." in result
+        assert "Para three." in result
+        assert "Para four." not in result
+
+    def test_fewer_than_max_paragraphs(self):
+        text = "Only one."
+        assert extract_excerpt(text, max_paragraphs=3) == "Only one."
+
+    def test_custom_max_paragraphs(self):
+        text = "A.\n\nB.\n\nC.\n\nD."
+        result = extract_excerpt(text, max_paragraphs=2)
+        assert "A." in result
+        assert "B." in result
+        assert "C." not in result
+
+    def test_blank_lines_stripped(self):
+        text = "\n\nFirst.\n\n\n\nSecond.\n\n"
+        result = extract_excerpt(text)
+        assert result == "First.\n\nSecond."
+
+    def test_preserves_paragraph_content(self):
+        text = "Line one of para.\nLine two of para.\n\nSecond para."
+        result = extract_excerpt(text)
+        assert "Line one of para.\nLine two of para." in result
+
+
+# ───────────────────────────────────────────────────────────────────
+# Telegraph integration in send_digest
+# ───────────────────────────────────────────────────────────────────
+
+
+class TestSendDigestTelegraph:
+    def test_no_token_skips_telegraph(self):
+        with patch("delivery.send.TelegramClient") as MockTG:
+            MockTG.return_value.send_message.return_value = {
+                "ok": True, "result": {"message_id": 1},
+            }
+            with patch("delivery.send.TelegraphClient") as MockTP:
+                send_digest(_make_digest(content=_long_content()), "@chan", "token")
+        MockTP.assert_not_called()
+
+    def test_none_token_skips_telegraph(self):
+        with patch("delivery.send.TelegramClient") as MockTG:
+            MockTG.return_value.send_message.return_value = {
+                "ok": True, "result": {"message_id": 1},
+            }
+            with patch("delivery.send.TelegraphClient") as MockTP:
+                send_digest(
+                    _make_digest(content=_long_content()),
+                    "@chan", "token", telegraph_token=None,
+                )
+        MockTP.assert_not_called()
+
+    def test_short_content_skips_telegraph(self):
+        with patch("delivery.send.TelegramClient") as MockTG:
+            MockTG.return_value.send_message.return_value = {
+                "ok": True, "result": {"message_id": 1},
+            }
+            with patch("delivery.send.TelegraphClient") as MockTP:
+                send_digest(
+                    _make_digest(content="Short."),
+                    "@chan", "token", telegraph_token="tph-token",
+                )
+        MockTP.assert_not_called()
+
+    def test_telegraph_success_includes_telegraph_link(self):
+        with patch("delivery.send.TelegramClient") as MockTG:
+            MockTG.return_value.send_message.return_value = {
+                "ok": True, "result": {"message_id": 1},
+            }
+            with patch("delivery.send.TelegraphClient") as MockTP:
+                MockTP.return_value.create_page.return_value = (
+                    "https://telegra.ph/Test-Page"
+                )
+                send_digest(
+                    _make_digest(content=_long_content()),
+                    "@chan", "token", telegraph_token="tph-token",
+                )
+        sent_text = MockTG.return_value.send_message.call_args[0][1]
+        assert "Read full analysis" in sent_text
+        assert "telegra.ph/Test-Page" in sent_text
+
+    def test_telegraph_success_contains_excerpt(self):
+        long = "First paragraph here.\n\nSecond paragraph here.\n\nThird.\n\n" + "More. " * 200
+        with patch("delivery.send.TelegramClient") as MockTG:
+            MockTG.return_value.send_message.return_value = {
+                "ok": True, "result": {"message_id": 1},
+            }
+            with patch("delivery.send.TelegraphClient") as MockTP:
+                MockTP.return_value.create_page.return_value = (
+                    "https://telegra.ph/Test-Page"
+                )
+                send_digest(
+                    _make_digest(content=long),
+                    "@chan", "token", telegraph_token="tph-token",
+                )
+        sent_text = MockTG.return_value.send_message.call_args[0][1]
+        assert "First paragraph here" in sent_text
+        assert "Second paragraph here" in sent_text
+
+    def test_telegraph_success_does_not_contain_full_content(self):
+        paras = [f"Paragraph {i} with additional filler text to make it longer." for i in range(20)]
+        long = "\n\n".join(paras)
+        assert len(long) >= TELEGRAPH_THRESHOLD
+        with patch("delivery.send.TelegramClient") as MockTG:
+            MockTG.return_value.send_message.return_value = {
+                "ok": True, "result": {"message_id": 1},
+            }
+            with patch("delivery.send.TelegraphClient") as MockTP:
+                MockTP.return_value.create_page.return_value = (
+                    "https://telegra.ph/Test-Page"
+                )
+                send_digest(
+                    _make_digest(content=long),
+                    "@chan", "token", telegraph_token="tph-token",
+                )
+        sent_text = MockTG.return_value.send_message.call_args[0][1]
+        assert "Paragraph 0" in sent_text
+        assert "Paragraph 2" in sent_text
+        assert "Paragraph 19" not in sent_text
+
+    def test_telegraph_failure_falls_back_to_truncation(self):
+        with patch("delivery.send.TelegramClient") as MockTG:
+            MockTG.return_value.send_message.return_value = {
+                "ok": True, "result": {"message_id": 1},
+            }
+            with patch("delivery.send.TelegraphClient") as MockTP:
+                MockTP.return_value.create_page.side_effect = TelegraphAPIError(
+                    "Connection refused"
+                )
+                result = send_digest(
+                    _make_digest(content=_long_content()),
+                    "@chan", "token", telegraph_token="tph-token",
+                )
+        assert result.success is True
+        sent_text = MockTG.return_value.send_message.call_args[0][1]
+        assert "Read full analysis" not in sent_text
+        assert "telegra.ph" not in sent_text
+
+    def test_telegraph_failure_does_not_crash_pipeline(self):
+        with patch("delivery.send.TelegramClient") as MockTG:
+            MockTG.return_value.send_message.return_value = {
+                "ok": True, "result": {"message_id": 1},
+            }
+            with patch("delivery.send.TelegraphClient") as MockTP:
+                MockTP.return_value.create_page.side_effect = Exception(
+                    "Unexpected boom"
+                )
+                result = send_digest(
+                    _make_digest(content=_long_content()),
+                    "@chan", "token", telegraph_token="tph-token",
+                )
+        assert result.success is True
+
+    def test_telegraph_success_preserves_quick_hits(self):
+        with patch("delivery.send.TelegramClient") as MockTG:
+            MockTG.return_value.send_message.return_value = {
+                "ok": True, "result": {"message_id": 1},
+            }
+            with patch("delivery.send.TelegraphClient") as MockTP:
+                MockTP.return_value.create_page.return_value = (
+                    "https://telegra.ph/Test-Page"
+                )
+                send_digest(
+                    _make_digest(content=_long_content()),
+                    "@chan", "token", telegraph_token="tph-token",
+                )
+        sent_text = MockTG.return_value.send_message.call_args[0][1]
+        assert "QUICK HITS" in sent_text
+        assert "quick\\-1" in sent_text
+
+    def test_telegraph_success_preserves_header(self):
+        with patch("delivery.send.TelegramClient") as MockTG:
+            MockTG.return_value.send_message.return_value = {
+                "ok": True, "result": {"message_id": 1},
+            }
+            with patch("delivery.send.TelegraphClient") as MockTP:
+                MockTP.return_value.create_page.return_value = (
+                    "https://telegra.ph/Test-Page"
+                )
+                send_digest(
+                    _make_digest(content=_long_content()),
+                    "@chan", "token", telegraph_token="tph-token",
+                )
+        sent_text = MockTG.return_value.send_message.call_args[0][1]
+        assert "Daily Digest" in sent_text
+        assert "DEEP DIVE" in sent_text
+
+    def test_telegraph_passes_repo_name_as_title(self):
+        with patch("delivery.send.TelegramClient") as MockTG:
+            MockTG.return_value.send_message.return_value = {
+                "ok": True, "result": {"message_id": 1},
+            }
+            with patch("delivery.send.TelegraphClient") as MockTP:
+                MockTP.return_value.create_page.return_value = (
+                    "https://telegra.ph/Test-Page"
+                )
+                send_digest(
+                    _make_digest(content=_long_content()),
+                    "@chan", "token", telegraph_token="tph-token",
+                )
+        create_call = MockTP.return_value.create_page.call_args
+        assert create_call[1]["title"] == "deep-repo"

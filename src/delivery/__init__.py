@@ -9,6 +9,7 @@ from delivery.types import (
     MessageTooLongError,
     SummaryWithRepo,
     TelegramAPIError,
+    TelegraphAPIError,
 )
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "MessageTooLongError",
     "SummaryWithRepo",
     "TelegramAPIError",
+    "TelegraphAPIError",
 ]

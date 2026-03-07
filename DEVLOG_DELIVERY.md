@@ -126,3 +126,116 @@
 - `src/delivery/telegram_client.py` — TelegramClient.send_message
 - `src/delivery/send.py` — send_digest (public entry point)
 - `src/delivery/__init__.py` — public exports
+
+## Phase 2: Formatting Improvements (Build + Refine)
+
+### Step 1 — Telegraph client (2026-03-07)
+
+**What was done:**
+- Created `src/delivery/telegraph_client.py` with:
+  - `TelegraphClient(access_token)` class with `create_page(title, html_content, author_name, author_url) → page_url`
+  - `create_account(short_name, author_name) → access_token` standalone setup utility
+  - `text_to_telegraph_html(text)` — converts plain text to Telegraph's HTML subset:
+    - Paragraph splitting on blank lines, consecutive lines joined
+    - HTML entity escaping (`&`, `<`, `>`)
+    - `**bold**` → `<b>bold</b>` conversion
+    - Bare URL linkification → `<a>` tags
+  - Internal helpers: `_split_paragraphs`, `_escape_html`, `_apply_bold`, `_linkify_urls`
+  - HTTP error handling mirrors `TelegramClient` pattern (ConnectionError, Timeout, RequestException → `TelegraphAPIError`)
+- Added `TelegraphAPIError` exception to `src/delivery/types.py` (non-fatal — callers fall back to truncation)
+- Updated `src/delivery/__init__.py` to export `TelegraphAPIError`
+- Created `tests/delivery/test_telegraph_client.py` — 48 tests covering:
+  - HTML conversion (14 tests): empty/whitespace, paragraphs, escaping, bold, links, combined
+  - Internal helpers (11 tests): paragraph splitting, HTML escaping, bold conversion, URL linkification
+  - `create_page` success (7 tests): return value, payload fields, endpoint URL
+  - `create_page` API errors (4 tests): ok=false, missing URL, non-JSON, HTTP errors
+  - `create_page` network errors (3 tests): connection, timeout, generic
+  - `create_account` (6 tests): success, payload, URL, API error, missing token, network error
+  - All tests use mocked HTTP (api.telegra.ph blocked on corporate network per D-5)
+
+**Decisions:** None — followed DEVPLAN spec and existing `TelegramClient` patterns.
+
+**Issues:** None.
+
+**Test count:** 48 new, 171 delivery tests, all passing.
+
+### Step 2 — Quick-hit formatting (2026-03-07)
+
+**What was done:**
+- Changed `format_quick_hit` in `src/delivery/formatting.py`: removed `— {content}` from header line, placed summary content on its own indented line between header and GitHub link
+- Added 2 structural tests in `tests/delivery/test_formatting.py`:
+  - `test_content_on_separate_line_from_header` — verifies name and content are on different lines
+  - `test_dash_separator_removed` — verifies `—` no longer appears
+- All 6 existing quick-hit tests pass unchanged (used `in` assertions, layout-independent)
+
+**Decisions:** None.
+
+**Issues:** None.
+
+**Test count:** 2 new, 77 formatting tests, all passing.
+
+### Step 3 — Wire Telegraph into send_digest (2026-03-07)
+
+**What was done:**
+- Added `extract_excerpt(text, max_paragraphs=3)` and `TELEGRAPH_THRESHOLD = 1000` to `src/delivery/formatting.py`
+- Rewrote `src/delivery/send.py`:
+  - `send_digest` gains optional `telegraph_token: str | None = None` parameter
+  - `_try_publish_telegraph(digest, telegraph_token)` — publishes deep dive to Telegraph if content ≥1000 chars; returns page URL or None; never raises
+  - `_build_message_with_telegraph(digest, telegraph_url)` — builds Telegram message with excerpt (first 3 paragraphs) + "Read full analysis →" Telegraph link
+  - Fallback: if no token, content too short, or Telegraph fails → existing `format_digest` + truncation path
+- Updated `src/orchestrator/pipeline.py`: reads `TELEGRAPH_ACCESS_TOKEN` from env, passes `telegraph_token=` to `send_digest()`
+- Added 17 new tests in `tests/delivery/test_send.py`:
+  - `TestExtractExcerpt` (6 tests): single/multi paragraph, custom max, blank line handling
+  - `TestSendDigestTelegraph` (11 tests): no-token skip, None-token skip, short-content skip, success with link, success with excerpt, excerpt excludes later paragraphs, failure fallback, unexpected error resilience, preserves quick hits, preserves header, passes repo name as title
+
+**Decisions:** None — followed DEVPLAN spec.
+
+**Issues:**
+- Initial test `test_telegraph_success_does_not_contain_full_content` used 10 short paragraphs (268 chars total) — below TELEGRAPH_THRESHOLD, so Telegraph was skipped and full content appeared. Fixed by using 20 longer paragraphs to exceed threshold.
+
+**Test count:** 17 new (send) + 2 new (formatting), 570 total project tests, all passing.
+
+### Contract Changes (Steps 3 & 4)
+- **ARCH_delivery.md:** `send_digest` signature updated from `(digest, channel_id, bot_token)` to `(digest, channel_id, bot_token, telegraph_token=None)`. Added `TelegraphAPIError` to errors. Updated purpose, guarantees, inputs, and usage example for Telegraph support. Propagated in Step 4.
+- **ARCH_orchestrator.md:** Pipeline step 11 updated to include `telegraph_token` parameter read from `TELEGRAPH_ACCESS_TOKEN` env var. Propagated in Step 4.
+
+### Step 4 — Review and cleanup (2026-03-07)
+
+**What was done:**
+- Propagated contract changes to upstream documents:
+  - `ARCH_delivery.md`: updated `send_digest` signature, added `telegraph_token` parameter docs, added `TelegraphAPIError` to errors, updated purpose/guarantees/inputs/usage example
+  - `ARCH_orchestrator.md`: updated pipeline step 11 to show `telegraph_token` parameter
+- Updated `DEVPLAN_DELIVERY.md` current status to Step 4 / phase completion
+- Full test suite: 570 passed, 0 regressions
+- No code changes — doc-only step
+
+**Decisions:** None.
+
+**Issues:**
+- Visual review of Telegram output deferred — requires server deployment (Telegraph API blocked on corporate network per D-5). This is the Refine portion of Phase 2; Build portion is complete.
+
+### Phase 2 Review & Cleanup (2026-03-07)
+
+**Code review findings fixed:**
+
+Must-fix:
+- `_build_message_with_telegraph` in `send.py` duplicated `format_digest` layout logic and imported private symbols (`_CRITERIA_EMOJI`, `_SECTION_SEPARATOR`) from `formatting.py`. Refactored: added `_format_deep_dive_with_excerpt` to `formatting.py`, extended `format_digest` to accept optional `telegraph_url` parameter, removed `_build_message_with_telegraph` from `send.py` entirely.
+- `create_page` content handling had a dead code branch (`"<" not in html_content` was never true since `text_to_telegraph_html` always produces HTML). Removed the branching; content is now always passed as an HTML string.
+
+Should-fix:
+- `create_account` duplicated `TelegraphClient._post` HTTP/error handling (28 lines). Extracted `_telegraph_post` as a module-level function reused by both.
+- `TELEGRAPH_THRESHOLD` moved from `formatting.py` to `send.py` (delivery-policy constant, not a formatting concept).
+- Removed dead `_mock_telegram_success` helper and unused `MagicMock`/`SummaryWithRepo` imports from `test_send.py`.
+
+**Phase result:** 4 steps completed. Visual review deferred to server deployment.
+
+**Final stats:** 190 delivery tests (67 new in Phase 2), 570 total project tests.
+
+**Files (final, Phase 2 additions/changes marked with *):**
+- `src/delivery/types.py` — +TelegraphAPIError*
+- `src/delivery/formatting.py` — +extract_excerpt*, +_format_deep_dive_with_excerpt*, format_digest gains telegraph_url param*, format_quick_hit layout changed*
+- `src/delivery/telegraph_client.py`* — TelegraphClient.create_page, create_account, text_to_telegraph_html, _telegraph_post
+- `src/delivery/send.py` — +telegraph_token param*, +_try_publish_telegraph*, Telegraph→format_digest wiring*
+- `src/delivery/telegram_client.py` — unchanged
+- `src/delivery/__init__.py` — +TelegraphAPIError export*
+- `src/orchestrator/pipeline.py` — +TELEGRAPH_ACCESS_TOKEN env read*

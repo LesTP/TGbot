@@ -51,7 +51,7 @@ Coordinate the daily digest pipeline: discover repos, filter out recently featur
 8. Call `Summarization.generate_quick_hit()` for each quick-hit candidate (no recent context — too short to benefit)
 9. Persist summaries via `Storage.save_summary()` (pass `summary_type` as str: `"deep"` or `"quick"`)
 10. Assemble Digest object
-11. Call `Delivery.send_digest(digest, channel_id, bot_token)`
+11. Call `Delivery.send_digest(digest, channel_id, bot_token, telegraph_token)` — `telegraph_token` read from `TELEGRAPH_ACCESS_TOKEN` env var (optional; None if not set)
 12. If delivery succeeds, call `Storage.record_feature()` for each featured repo (pass `feature_type` as str: `"deep"` or `"quick"`, `ranking_criteria` as `RankingCriteria.value`)
 13. Return PipelineResult
 

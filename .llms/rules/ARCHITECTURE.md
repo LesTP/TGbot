@@ -43,7 +43,7 @@ Orchestrator records [FeatureRecord] via Storage
 | 2 | Storage | ✅ Complete | Shared dependency for downstream modules. Start thin: repo persistence + history queries. |
 | 3 | Orchestrator (thin) | ✅ Complete | Wire Discovery → Storage. First working pipeline segment — discover and persist repos. |
 | 4 | Summarization | ✅ Complete | Highest remaining uncertainty (LLM prompts, cost, response parsing). Validates before Delivery. |
-| 5 | Delivery | ✅ Complete | Completes end-to-end path. First user-visible output (Telegram message). |
+| 5 | Delivery | ✅ Phase 2 complete | Completes end-to-end path. First user-visible output (Telegram message). |
 | 6 | Orchestrator (full) | ✅ Complete | Complete pipeline: dedup filtering, ranking rotation, digest assembly, feature history recording. |
 
 ## Coupling Notes

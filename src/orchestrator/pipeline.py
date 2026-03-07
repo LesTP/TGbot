@@ -407,7 +407,11 @@ def run_daily_pipeline(config: PipelineConfig) -> PipelineResult:
         )
 
     try:
-        delivery_result = send_digest(digest, config.channel_id, bot_token)
+        telegraph_token = os.environ.get("TELEGRAPH_ACCESS_TOKEN")
+        delivery_result = send_digest(
+            digest, config.channel_id, bot_token,
+            telegraph_token=telegraph_token,
+        )
     except Exception as e:
         msg = f"Delivery failed: {e}"
         logger.error(msg)

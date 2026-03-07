@@ -226,6 +226,17 @@ class TestFormatQuickHit:
         result = format_quick_hit(_make_summary(), 10)
         assert "10\\." in result
 
+    def test_content_on_separate_line_from_header(self):
+        result = format_quick_hit(_make_summary(name="myrepo", content="Summary text here"), 1)
+        lines = result.split("\n")
+        assert "*myrepo*" in lines[0]
+        assert "Summary text here" not in lines[0]
+        assert "Summary text here" in lines[1]
+
+    def test_dash_separator_removed(self):
+        result = format_quick_hit(_make_summary(), 1)
+        assert "—" not in result
+
 
 class TestFormatDigest:
     def test_contains_date(self):
