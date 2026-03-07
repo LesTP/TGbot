@@ -80,4 +80,4 @@ Revisit if: Batch architecture is promoted from deferred, or if delivery failure
 ## Provisional Contracts
 
 - DiscoveredRepo shape — designed source-agnostic but only tested with GitHub. May need adjustment when a second source is added. Resolve during first non-GitHub source implementation.
-- Dedup coordination — Orchestrator currently owns candidate filtering. If filtering rules grow complex (multi-criteria, scoring), may need a dedicated selection module. Watch during Orchestrator full implementation.
+- Dedup coordination — Orchestrator uses tiered cooldown: deep dives exclude repos for 90 days from all features; quick hits exclude from quick hits for 30 days but allow promotion to deep dive after a 7-day gap. If filtering rules grow more complex (multi-criteria scoring), may need a dedicated selection module.

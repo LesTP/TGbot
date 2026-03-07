@@ -25,6 +25,9 @@ class TestPipelineConfigDefaults:
         assert config.quick_hit_count == 3
         assert config.discovery_limit == 20
         assert config.cooldown_days == 90
+        assert config.quick_hit_cooldown_days == 30
+        assert config.promotion_gap_days == 7
+        assert config.context_lookback_days == 14
 
     def test_ranking_criteria_defaults_to_none(self):
         config = PipelineConfig(category=self.category, channel_id="@test")
@@ -54,11 +57,15 @@ class TestPipelineConfigDefaults:
             quick_hit_count=5,
             discovery_limit=50,
             cooldown_days=30,
+            quick_hit_cooldown_days=14,
+            promotion_gap_days=3,
         )
         assert config.deep_dive_count == 2
         assert config.quick_hit_count == 5
         assert config.discovery_limit == 50
         assert config.cooldown_days == 30
+        assert config.quick_hit_cooldown_days == 14
+        assert config.promotion_gap_days == 3
 
 
 # ---------------------------------------------------------------------------

@@ -15,9 +15,7 @@ from delivery import send_digest
 from delivery.types import (
     DeliveryResult,
     Digest,
-    MessageTooLongError,
     SummaryWithRepo,
-    TelegramAPIError,
 )
 from discovery import discover_repos
 from discovery.types import GitHubAPIError, NoResultsError
@@ -88,22 +86,36 @@ def _build_recent_context(summary_records: list[SummaryRecord]) -> list[dict]:
 
 def _select_candidates(
     saved_repos: list[RepoRecord],
-    featured_ids: set[int],
+    deep_excluded: set[int],
+    quick_excluded: set[int],
     deep_dive_count: int,
     quick_hit_count: int,
 ) -> tuple[list[RepoRecord], list[RepoRecord]]:
-    """Filter out recently featured repos and split into deep/quick pools.
+    """Filter repos with tiered cooldown and split into deep/quick pools.
 
-    Repos are already in ranked order from Discovery. After removing
-    recently featured repos, the top deep_dive_count become deep-dive
-    candidates and the next quick_hit_count become quick-hit candidates.
+    Repos are already in ranked order from Discovery. Each pool has its
+    own exclusion set (tiered cooldown):
+      - deep pool: excludes repos deep-dived within cooldown_days OR
+        quick-hit within promotion_gap_days
+      - quick pool: excludes repos deep-dived within cooldown_days OR
+        quick-hit within quick_hit_cooldown_days
+
+    A repo may appear in the deep pool even if excluded from the quick pool
+    (the promotion path: quick-hit 8+ days ago → eligible for deep dive).
 
     Returns:
         (deep_dive_candidates, quick_hit_candidates)
     """
-    eligible = [r for r in saved_repos if r.id not in featured_ids]
-    deep = eligible[:deep_dive_count]
-    quick = eligible[deep_dive_count : deep_dive_count + quick_hit_count]
+    deep_eligible = [r for r in saved_repos if r.id not in deep_excluded]
+    quick_eligible = [r for r in saved_repos if r.id not in quick_excluded]
+
+    deep = deep_eligible[:deep_dive_count]
+
+    # Quick pool excludes repos already selected for deep dive
+    deep_ids = {r.id for r in deep}
+    quick_pool = [r for r in quick_eligible if r.id not in deep_ids]
+    quick = quick_pool[:quick_hit_count]
+
     return deep, quick
 
 
@@ -192,7 +204,8 @@ def _assemble_digest(
 
 
 def run_daily_pipeline(config: PipelineConfig) -> PipelineResult:
-    """Execute the daily pipeline: discover → persist → filter → select → summarize.
+    """Execute the daily pipeline: discover → persist → dedup → select →
+    summarize → assemble → deliver → record features.
 
     Does not raise — all errors captured in PipelineResult.errors.
     """
@@ -254,9 +267,17 @@ def run_daily_pipeline(config: PipelineConfig) -> PipelineResult:
 
     logger.info("Persisted %d/%d repos", len(saved_repos), len(discovered))
 
-    # Step 4: Query feature history for dedup
+    # Step 4: Query feature history for tiered cooldown
     try:
-        featured_ids = storage.get_featured_repo_ids(config.cooldown_days)
+        deep_featured = storage.get_featured_repo_ids(
+            config.cooldown_days, feature_type="deep"
+        )
+        quick_cooldown = storage.get_featured_repo_ids(
+            config.quick_hit_cooldown_days, feature_type="quick"
+        )
+        promotion_blocked = storage.get_featured_repo_ids(
+            config.promotion_gap_days, feature_type="quick"
+        )
     except StorageError as e:
         msg = f"Feature history query failed: {e}"
         logger.error(msg)
@@ -268,12 +289,18 @@ def run_daily_pipeline(config: PipelineConfig) -> PipelineResult:
             errors=errors + [msg],
         )
 
+    deep_excluded = deep_featured | promotion_blocked
+    quick_excluded = deep_featured | quick_cooldown
+
     # Step 5: Filter candidates and select deep/quick pools
     deep_candidates, quick_candidates = _select_candidates(
-        saved_repos, featured_ids, config.deep_dive_count, config.quick_hit_count
+        saved_repos, deep_excluded, quick_excluded,
+        config.deep_dive_count, config.quick_hit_count,
     )
-    all_eligible = [r for r in saved_repos if r.id not in featured_ids]
-    repos_after_dedup = len(all_eligible)
+    all_deep_eligible = [r for r in saved_repos if r.id not in deep_excluded]
+    all_quick_eligible = [r for r in saved_repos if r.id not in quick_excluded]
+    all_eligible_ids = {r.id for r in all_deep_eligible} | {r.id for r in all_quick_eligible}
+    repos_after_dedup = len(all_eligible_ids)
 
     logger.info(
         "After dedup: %d eligible, %d deep candidates, %d quick candidates",
@@ -317,7 +344,7 @@ def run_daily_pipeline(config: PipelineConfig) -> PipelineResult:
         logger.warning("Failed to fetch recent summaries for context: %s", e)
 
     # Step 7: Generate deep dive (with fallback)
-    remaining_eligible = [r for r in all_eligible if r not in deep_candidates]
+    remaining_eligible = [r for r in all_deep_eligible if r not in deep_candidates]
     deep_result = _generate_deep_dive_with_fallback(
         deep_candidates, remaining_eligible, llm_config, recent_context, errors
     )
@@ -381,7 +408,7 @@ def run_daily_pipeline(config: PipelineConfig) -> PipelineResult:
 
     try:
         delivery_result = send_digest(digest, config.channel_id, bot_token)
-    except (MessageTooLongError, Exception) as e:
+    except Exception as e:
         msg = f"Delivery failed: {e}"
         logger.error(msg)
         return PipelineResult(

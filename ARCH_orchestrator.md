@@ -16,7 +16,9 @@ Coordinate the daily digest pipeline: discover repos, filter out recently featur
       deep_dive_count: int                   # default 1
       quick_hit_count: int                   # default 3
       discovery_limit: int                   # how many to discover (default 20)
-      cooldown_days: int                     # dedup window (default 90)
+      cooldown_days: int                     # deep-dive dedup window (default 90)
+      quick_hit_cooldown_days: int           # quick-hit dedup window (default 30)
+      promotion_gap_days: int               # min days before quick→deep promotion (default 7)
       context_lookback_days: int             # recent summaries for LLM context (default 14)
       channel_id: str                        # Telegram channel
     ```
@@ -36,14 +38,20 @@ Coordinate the daily digest pipeline: discover repos, filter out recently featur
 1. Resolve ranking: if `config.ranking_criteria` is None, call `get_todays_ranking(today)` to determine it
 2. Call `Discovery.discover_repos(category, ranking, discovery_limit)` → DiscoveredRepo list (already ranked)
 3. Persist each via `Storage.save_repo()` → RepoRecord list
-4. Query `Storage.get_featured_repo_ids(cooldown_days)` → exclusion set
-5. Filter candidates: remove recently featured from the ranked list, select top `deep_dive_count` for deep dive + next `quick_hit_count` for quick hits
+4. Query feature history with tiered cooldown:
+   - `Storage.get_featured_repo_ids(cooldown_days, feature_type="deep")` → deep exclusion set
+   - `Storage.get_featured_repo_ids(quick_hit_cooldown_days, feature_type="quick")` → quick exclusion set
+   - `Storage.get_featured_repo_ids(promotion_gap_days, feature_type="quick")` → promotion gap set
+5. Filter candidates with tiered rules:
+   - Deep-dive pool: exclude repos in deep exclusion set ∪ promotion gap set
+   - Quick-hit pool: exclude repos in deep exclusion set ∪ quick exclusion set
+   - Select top `deep_dive_count` from deep pool, top `quick_hit_count` from quick pool
 6. Query `Storage.get_recent_summaries(context_lookback_days)` → recent summary context for LLM comparison/positioning
 7. Call `Summarization.generate_deep_dive()` for each deep-dive candidate, passing recent summaries as context
 8. Call `Summarization.generate_quick_hit()` for each quick-hit candidate (no recent context — too short to benefit)
 9. Persist summaries via `Storage.save_summary()` (pass `summary_type` as str: `"deep"` or `"quick"`)
 10. Assemble Digest object
-11. Call `Delivery.send_digest(digest, channel_id)`
+11. Call `Delivery.send_digest(digest, channel_id, bot_token)`
 12. If delivery succeeds, call `Storage.record_feature()` for each featured repo (pass `feature_type` as str: `"deep"` or `"quick"`, `ranking_criteria` as `RankingCriteria.value`)
 13. Return PipelineResult
 
@@ -57,9 +65,11 @@ Coordinate the daily digest pipeline: discover repos, filter out recently featur
 - **CategoryConfig**, **RankingCriteria**, **DiscoveredRepo** — from ARCH_discovery
 - **RepoRecord**, **SummaryRecord**, **FeatureRecord**, **StorageError** — from ARCH_storage
 
-**New Storage dependency (Orchestrator Full):** `Storage.get_recent_summaries(since_days)` — not yet in ARCH_storage. Must be added before Orchestrator Full implementation.
+**Storage dependency:** `Storage.get_featured_repo_ids(since_days, feature_type)` — optional `feature_type` filter added for tiered cooldown support.
 
 **Type boundary note:** Storage accepts plain strings for `summary_type` (`"deep"` | `"quick"`), `feature_type` (`"deep"` | `"quick"`), and `ranking_criteria` (e.g. `"stars"`). Orchestrator uses Discovery's `RankingCriteria` enum internally and passes `.value` when calling Storage.
+
+**Tiered cooldown:** Deep dives block a repo from all features for `cooldown_days` (90). Quick hits block re-featuring as quick hit for `quick_hit_cooldown_days` (30), but only block promotion to deep dive for `promotion_gap_days` (7). This allows high-quality repos to "promote" from a brief quick-hit mention to a full deep-dive analysis after a short gap.
 
 ## Inputs
 - PipelineConfig (from environment/config + cron invocation)

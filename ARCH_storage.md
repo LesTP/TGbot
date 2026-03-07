@@ -18,9 +18,11 @@ Persist and query all durable data: discovered repos, generated summaries, and f
 - **Errors:** `StorageError` — database read failed.
 
 ### get_featured_repo_ids
-- **Signature:** `get_featured_repo_ids(since_days: int = 90) -> set[int]`
-- **Parameters:** since_days — lookback window for feature history (default 90)
-- **Returns:** Set of repo IDs featured within the lookback window.
+- **Signature:** `get_featured_repo_ids(since_days: int = 90, feature_type: str | None = None) -> set[int]`
+- **Parameters:**
+  - since_days — lookback window for feature history (default 90)
+  - feature_type — optional filter: `"deep"`, `"quick"`, or `None` for all types (default None)
+- **Returns:** Set of repo IDs featured within the lookback window, optionally filtered by feature type.
 - **Errors:** `StorageError` — database read failed.
 
 ### save_summary
@@ -74,11 +76,12 @@ from storage import save_repo, get_featured_repo_ids, save_summary, record_featu
 # Persist a discovered repo
 record = save_repo(discovered_repo)
 
-# Check what's been featured recently
-featured = get_featured_repo_ids(since_days=90)
-if record.id not in featured:
-    # This repo is eligible for featuring
-    ...
+# Check what's been featured recently (tiered cooldown)
+deep_excluded = get_featured_repo_ids(since_days=90, feature_type="deep")
+quick_excluded = get_featured_repo_ids(since_days=30, feature_type="quick")
+promotion_blocked = get_featured_repo_ids(since_days=7, feature_type="quick")
+# Deep-dive eligible: not in deep_excluded and not in promotion_blocked
+# Quick-hit eligible: not in deep_excluded and not in quick_excluded
 
 # Save a generated summary
 summary = save_summary(record.id, "deep", content="...", model_used="claude-sonnet-4-5")

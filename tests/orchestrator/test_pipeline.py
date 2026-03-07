@@ -113,14 +113,14 @@ def _make_summary_result(content: str = "Generated summary.") -> SummaryResult:
     )
 
 
-def _feature_repo(repo_id: int, days_ago: int = 0) -> None:
+def _feature_repo(repo_id: int, days_ago: int = 0, feature_type: str = "deep") -> None:
     """Insert a feature_history record via direct SQL for test setup."""
     conn = storage.db.get_connection()
     featured_date = (date.today() - timedelta(days=days_ago)).isoformat()
     conn.execute(
         "INSERT INTO feature_history (repo_id, feature_type, featured_date, ranking_criteria) "
-        "VALUES (?, 'deep', ?, 'stars')",
-        (repo_id, featured_date),
+        "VALUES (?, ?, ?, 'stars')",
+        (repo_id, feature_type, featured_date),
     )
     conn.commit()
 
@@ -247,37 +247,60 @@ class TestBuildRecentContext:
 
 class TestSelectCandidates:
 
-    def test_no_featured_returns_top_split(self):
+    def test_no_excluded_returns_top_split(self):
         repos = [_make_repo_record(i) for i in range(1, 8)]
-        deep, quick = _select_candidates(repos, featured_ids=set(), deep_dive_count=1, quick_hit_count=3)
+        deep, quick = _select_candidates(repos, deep_excluded=set(), quick_excluded=set(), deep_dive_count=1, quick_hit_count=3)
         assert len(deep) == 1
         assert deep[0].id == 1
         assert len(quick) == 3
         assert [r.id for r in quick] == [2, 3, 4]
 
-    def test_featured_excluded(self):
+    def test_excluded_from_both_pools(self):
+        """Repos in both exclusion sets are excluded from both pools."""
         repos = [_make_repo_record(i) for i in range(1, 8)]
-        deep, quick = _select_candidates(repos, featured_ids={1, 2, 3}, deep_dive_count=1, quick_hit_count=3)
+        excluded = {1, 2, 3}
+        deep, quick = _select_candidates(repos, deep_excluded=excluded, quick_excluded=excluded, deep_dive_count=1, quick_hit_count=3)
         assert deep[0].id == 4
         assert [r.id for r in quick] == [5, 6, 7]
 
-    def test_all_featured_returns_empty(self):
+    def test_all_excluded_returns_empty(self):
         repos = [_make_repo_record(i) for i in range(1, 4)]
-        deep, quick = _select_candidates(repos, featured_ids={1, 2, 3}, deep_dive_count=1, quick_hit_count=3)
+        excluded = {1, 2, 3}
+        deep, quick = _select_candidates(repos, deep_excluded=excluded, quick_excluded=excluded, deep_dive_count=1, quick_hit_count=3)
         assert deep == []
         assert quick == []
 
     def test_fewer_than_requested(self):
         repos = [_make_repo_record(i) for i in range(1, 4)]
-        deep, quick = _select_candidates(repos, featured_ids=set(), deep_dive_count=1, quick_hit_count=5)
+        deep, quick = _select_candidates(repos, deep_excluded=set(), quick_excluded=set(), deep_dive_count=1, quick_hit_count=5)
         assert len(deep) == 1
         assert len(quick) == 2
 
     def test_preserves_ranked_order(self):
         repos = [_make_repo_record(i) for i in range(1, 11)]
-        deep, quick = _select_candidates(repos, featured_ids={2, 4}, deep_dive_count=1, quick_hit_count=3)
+        excluded = {2, 4}
+        deep, quick = _select_candidates(repos, deep_excluded=excluded, quick_excluded=excluded, deep_dive_count=1, quick_hit_count=3)
         assert deep[0].id == 1
         assert [r.id for r in quick] == [3, 5, 6]
+
+    def test_tiered_exclusion_deep_eligible_quick_excluded(self):
+        """Repo excluded from quick pool but eligible for deep pool (promotion path)."""
+        repos = [_make_repo_record(i) for i in range(1, 6)]
+        # Repo 1 quick-hit'd 10 days ago: past promotion gap (7d), within quick cooldown (30d)
+        deep_excluded = set()       # no deep exclusions
+        quick_excluded = {1}        # repo 1 excluded from quick
+        deep, quick = _select_candidates(repos, deep_excluded=deep_excluded, quick_excluded=quick_excluded, deep_dive_count=1, quick_hit_count=3)
+        assert deep[0].id == 1     # promoted to deep dive!
+        assert 1 not in [r.id for r in quick]   # not in quick pool
+        assert [r.id for r in quick] == [2, 3, 4]
+
+    def test_deep_selected_excluded_from_quick(self):
+        """Repos selected for deep dive are not also selected for quick hits."""
+        repos = [_make_repo_record(i) for i in range(1, 8)]
+        deep, quick = _select_candidates(repos, deep_excluded=set(), quick_excluded=set(), deep_dive_count=1, quick_hit_count=3)
+        deep_ids = {r.id for r in deep}
+        quick_ids = {r.id for r in quick}
+        assert deep_ids.isdisjoint(quick_ids)
 
 
 # ---------------------------------------------------------------------------
@@ -846,12 +869,13 @@ class TestDedupFiltering:
         with patch.dict("os.environ", _MOCK_ENV):
             run_daily_pipeline(_make_config())
 
-        # Additionally feature repos 5, 6 (manually, within cooldown)
-        _feature_repo(5, days_ago=5)
-        _feature_repo(6, days_ago=10)
+        # Additionally feature repos 5, 6 (deep, within cooldown)
+        _feature_repo(5, days_ago=5, feature_type="deep")
+        _feature_repo(6, days_ago=10, feature_type="deep")
 
-        # Second run: repos 1-4 featured by first run + repos 5-6 manually = 6 featured
-        # Only repo 7 eligible
+        # Second run: repo 1 deep-featured + repos 2-4 quick-featured (today, within promotion gap)
+        # + repos 5-6 deep-featured manually = 6 excluded from deep
+        # Only repo 7 eligible for deep
         with patch.dict("os.environ", _MOCK_ENV):
             result = run_daily_pipeline(_make_config())
         assert result.repos_discovered == 7
@@ -869,7 +893,7 @@ class TestDedupFiltering:
         with patch.dict("os.environ", _MOCK_ENV):
             run_daily_pipeline(_make_config())
 
-        # Second run: all 3 repos already featured
+        # Second run: all 3 repos featured today → all excluded from deep
         with patch.dict("os.environ", _MOCK_ENV):
             result = run_daily_pipeline(_make_config())
         assert result.success is False
@@ -888,11 +912,11 @@ class TestDedupFiltering:
         for r in repos:
             storage.save_repo(r)
 
-        _feature_repo(1, days_ago=100)
-        _feature_repo(2, days_ago=100)
-        _feature_repo(3, days_ago=100)
+        _feature_repo(1, days_ago=100, feature_type="deep")
+        _feature_repo(2, days_ago=100, feature_type="deep")
+        _feature_repo(3, days_ago=100, feature_type="quick")
 
-        # All 3 features are outside the 90-day window → all eligible
+        # All features are outside the 90-day window → all eligible
         with patch.dict("os.environ", _MOCK_ENV):
             result = run_daily_pipeline(_make_config(cooldown_days=90))
         assert result.repos_after_dedup == 3
@@ -902,7 +926,7 @@ class TestDedupFiltering:
     @patch("orchestrator.pipeline.generate_deep_dive", return_value=_make_summary_result("Deep."))
     @patch("orchestrator.pipeline.discover_repos")
     def test_repos_after_dedup_count_correct(self, mock_discover, mock_deep, mock_quick, mock_send):
-        """repos_after_dedup reflects total eligible, not just selected."""
+        """repos_after_dedup reflects total eligible (union of both pools)."""
         repos = [_make_repo(i) for i in range(1, 11)]
         mock_discover.return_value = repos
 
@@ -910,10 +934,140 @@ class TestDedupFiltering:
         with patch.dict("os.environ", _MOCK_ENV):
             run_daily_pipeline(_make_config())
 
-        # Second run: 4 featured from first run → 6 eligible
+        # Second run: repos 1-4 featured today → all excluded from deep pool
+        # 6 repos eligible for deep, and also 6 for quick (repos 5-10 in both)
         with patch.dict("os.environ", _MOCK_ENV):
             result = run_daily_pipeline(_make_config())
         assert result.repos_after_dedup == 6
+
+
+# ---------------------------------------------------------------------------
+# Tiered cooldown (end-to-end through pipeline)
+# ---------------------------------------------------------------------------
+
+
+class TestTieredCooldown:
+
+    @patch("orchestrator.pipeline.send_digest", return_value=_MOCK_DELIVERY)
+    @patch("orchestrator.pipeline.generate_quick_hit", return_value=_make_summary_result("Quick."))
+    @patch("orchestrator.pipeline.generate_deep_dive", return_value=_make_summary_result("Deep."))
+    @patch("orchestrator.pipeline.discover_repos")
+    def test_quick_hit_within_promotion_gap_excluded_from_deep(
+        self, mock_discover, mock_deep, mock_quick, mock_send
+    ):
+        """Repo quick-hit'd 3 days ago is excluded from deep (within 7-day gap)."""
+        repos = [_make_repo(i) for i in range(1, 6)]
+        mock_discover.return_value = repos
+
+        for r in repos:
+            storage.save_repo(r)
+
+        _feature_repo(1, days_ago=3, feature_type="quick")
+
+        with patch.dict("os.environ", _MOCK_ENV):
+            result = run_daily_pipeline(_make_config())
+
+        # Repo 1 excluded from deep (promotion gap) and quick (within 30d)
+        deep_repo = mock_deep.call_args[0][0]
+        assert deep_repo.name != "owner/repo-1"
+
+    @patch("orchestrator.pipeline.send_digest", return_value=_MOCK_DELIVERY)
+    @patch("orchestrator.pipeline.generate_quick_hit", return_value=_make_summary_result("Quick."))
+    @patch("orchestrator.pipeline.generate_deep_dive", return_value=_make_summary_result("Deep."))
+    @patch("orchestrator.pipeline.discover_repos")
+    def test_quick_hit_past_promotion_gap_eligible_for_deep(
+        self, mock_discover, mock_deep, mock_quick, mock_send
+    ):
+        """Repo quick-hit'd 10 days ago is eligible for deep (past 7-day gap)."""
+        repos = [_make_repo(i) for i in range(1, 6)]
+        mock_discover.return_value = repos
+
+        for r in repos:
+            storage.save_repo(r)
+
+        # Repo 1 quick-hit 10 days ago: past promotion gap, still within quick cooldown
+        _feature_repo(1, days_ago=10, feature_type="quick")
+
+        with patch.dict("os.environ", _MOCK_ENV):
+            result = run_daily_pipeline(_make_config())
+
+        # Repo 1 is the top-ranked → should be selected for deep dive
+        deep_repo = mock_deep.call_args[0][0]
+        assert deep_repo.name == "owner/repo-1"
+        # But excluded from quick hits
+        quick_repos = [call[0][0].name for call in mock_quick.call_args_list]
+        assert "owner/repo-1" not in quick_repos
+
+    @patch("orchestrator.pipeline.send_digest", return_value=_MOCK_DELIVERY)
+    @patch("orchestrator.pipeline.generate_quick_hit", return_value=_make_summary_result("Quick."))
+    @patch("orchestrator.pipeline.generate_deep_dive", return_value=_make_summary_result("Deep."))
+    @patch("orchestrator.pipeline.discover_repos")
+    def test_quick_hit_past_quick_cooldown_eligible_for_both(
+        self, mock_discover, mock_deep, mock_quick, mock_send
+    ):
+        """Repo quick-hit'd 45 days ago is eligible for both pools."""
+        repos = [_make_repo(i) for i in range(1, 6)]
+        mock_discover.return_value = repos
+
+        for r in repos:
+            storage.save_repo(r)
+
+        _feature_repo(1, days_ago=45, feature_type="quick")
+
+        with patch.dict("os.environ", _MOCK_ENV):
+            result = run_daily_pipeline(_make_config())
+
+        # Repo 1 eligible for deep and not blocked from quick
+        assert result.success is True
+
+    @patch("orchestrator.pipeline.send_digest", return_value=_MOCK_DELIVERY)
+    @patch("orchestrator.pipeline.generate_quick_hit", return_value=_make_summary_result("Quick."))
+    @patch("orchestrator.pipeline.generate_deep_dive", return_value=_make_summary_result("Deep."))
+    @patch("orchestrator.pipeline.discover_repos")
+    def test_deep_dive_blocks_both_pools(
+        self, mock_discover, mock_deep, mock_quick, mock_send
+    ):
+        """Repo deep-dived 30 days ago is excluded from both pools."""
+        repos = [_make_repo(i) for i in range(1, 6)]
+        mock_discover.return_value = repos
+
+        for r in repos:
+            storage.save_repo(r)
+
+        _feature_repo(1, days_ago=30, feature_type="deep")
+
+        with patch.dict("os.environ", _MOCK_ENV):
+            result = run_daily_pipeline(_make_config())
+
+        deep_repo = mock_deep.call_args[0][0]
+        assert deep_repo.name != "owner/repo-1"
+        quick_repos = [call[0][0].name for call in mock_quick.call_args_list]
+        assert "owner/repo-1" not in quick_repos
+
+    @patch("orchestrator.pipeline.send_digest", return_value=_MOCK_DELIVERY)
+    @patch("orchestrator.pipeline.generate_quick_hit", return_value=_make_summary_result("Quick."))
+    @patch("orchestrator.pipeline.generate_deep_dive", return_value=_make_summary_result("Deep."))
+    @patch("orchestrator.pipeline.discover_repos")
+    def test_custom_cooldown_values(
+        self, mock_discover, mock_deep, mock_quick, mock_send
+    ):
+        """Custom cooldown config values are respected."""
+        repos = [_make_repo(i) for i in range(1, 6)]
+        mock_discover.return_value = repos
+
+        for r in repos:
+            storage.save_repo(r)
+
+        # Repo 1 quick-hit 5 days ago
+        _feature_repo(1, days_ago=5, feature_type="quick")
+
+        # With promotion_gap=3 (< 5 days ago), repo 1 should be eligible for deep
+        config = _make_config(promotion_gap_days=3, quick_hit_cooldown_days=30)
+        with patch.dict("os.environ", _MOCK_ENV):
+            result = run_daily_pipeline(config)
+
+        deep_repo = mock_deep.call_args[0][0]
+        assert deep_repo.name == "owner/repo-1"
 
 
 # ---------------------------------------------------------------------------

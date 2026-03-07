@@ -6,8 +6,9 @@ configuration and result shapes. See ARCH_orchestrator.md for contracts.
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Optional
 
+from delivery.types import DeliveryResult
 from discovery.types import CategoryConfig, RankingCriteria
 
 
@@ -26,6 +27,8 @@ class PipelineConfig:
     quick_hit_count: int = 3
     discovery_limit: int = 20
     cooldown_days: int = 90
+    quick_hit_cooldown_days: int = 30
+    promotion_gap_days: int = 7
     context_lookback_days: int = 14
 
 
@@ -41,5 +44,5 @@ class PipelineResult:
     repos_discovered: int
     repos_after_dedup: int
     summaries_generated: int
-    delivery_result: Any = None  # DeliveryResult, defined in ARCH_delivery
+    delivery_result: Optional[DeliveryResult] = None
     errors: list[str] = field(default_factory=list)

@@ -90,6 +90,79 @@ After successful delivery, pipeline records all featured repos via `storage.reco
 
 **Tests:** 54 pipeline tests (was 51) + 6 integration tests. 483 total suite passing (was 479).
 
+### Step 5b — Tiered cooldown (2026-03-07)
+
+Implemented tiered cooldown: deep dives block all features for 90 days, quick hits block quick-hit re-featuring for 30 days but only block deep-dive promotion for 7 days. Allows high-quality repos to "promote" from a brief quick-hit mention to a full deep-dive analysis.
+
+**Storage change (`src/storage/history.py`):**
+- `get_featured_repo_ids` gains optional `feature_type: str | None = None` parameter
+- When provided, adds `AND feature_type = ?` to SQL WHERE clause
+- Backward-compatible: `None` returns all types (existing behavior unchanged)
+
+**PipelineConfig change (`src/orchestrator/types.py`):**
+- Added `quick_hit_cooldown_days: int = 30` and `promotion_gap_days: int = 7`
+
+**Pipeline change (`src/orchestrator/pipeline.py`):**
+- Step 4 now makes three `get_featured_repo_ids` calls with `feature_type` filter:
+  - `(cooldown_days, "deep")` → deep exclusion set
+  - `(quick_hit_cooldown_days, "quick")` → quick exclusion set
+  - `(promotion_gap_days, "quick")` → promotion gap set
+- Combines into per-pool exclusion: `deep_excluded = deep_featured ∪ promotion_blocked`, `quick_excluded = deep_featured ∪ quick_cooldown`
+- `_select_candidates` signature changed from single `featured_ids` to `deep_excluded, quick_excluded` sets. Pools filter independently; repos selected for deep dive excluded from quick pool.
+- `repos_after_dedup` reports union of both pools' eligible repos
+
+**Tests:**
+- Storage: 7 new in `TestFeatureTypeFilter` (None/deep/quick filters, window+filter combo, both types, no matches, full tiered scenario)
+- Orchestrator types: updated defaults + overrides tests for new config fields
+- `TestSelectCandidates`: 5 updated for new signature + 2 new (tiered exclusion, deep excludes from quick)
+- `TestDedupFiltering`: 4 updated for tiered behavior
+- `TestTieredCooldown`: 5 new end-to-end (promotion gap blocks, promotion works, quick cooldown expires, deep blocks both, custom values)
+
+**Tests:** 61 pipeline tests (was 54) + 6 integration. 497 total suite passing (was 490).
+
+### Contract Changes
+- **ARCH_storage.md** — `get_featured_repo_ids` gains `feature_type` parameter
+- **ARCH_orchestrator.md** — `PipelineConfig` gains `quick_hit_cooldown_days`, `promotion_gap_days`; pipeline steps 4-5 updated; tiered cooldown note added
+- **ARCHITECTURE.md** — Provisional Contracts updated with tiered cooldown description
+
+### Step 6 — End-to-end integration test (2026-03-07)
+
+Added 6 comprehensive integration tests verifying the full pipeline with real SQLite storage and real internal wiring. Mocks only HTTP boundaries (GitHub API, Anthropic API, Telegram API).
+
+**New test class: `TestFullPipelineEndToEnd` (`tests/orchestrator/test_integration.py`):**
+- `test_full_pipeline_all_steps` — verifies every pipeline step executed: repos persisted in DB, summaries persisted with correct types, delivery called with correct Digest, features recorded
+- `test_pipeline_result_counts` — all PipelineResult fields have correct values (repos_discovered, repos_after_dedup, summaries_generated, delivery_result)
+- `test_second_run_deep_dive_excluded_from_both_pools` — two pipeline runs, deep-dived repo from run 1 excluded from both deep and quick pools in run 2
+- `test_second_run_quick_hit_excluded_from_quick_pool` — quick-hit repos from run 1 excluded from quick pool in run 2, no overlap between runs
+- `test_tiered_cooldown_promotion` — backdates run-1 features to 10 days ago, verifies quick-hit repos become eligible for deep dive (past 7-day promotion gap), while deep-dived repo stays excluded (within 90-day cooldown)
+- `test_tiered_cooldown_promotion_blocked_within_gap` — two immediate runs (same day), quick-hit repos still within promotion gap so NOT eligible for deep dive; deep dive falls through to unfeatured repos
+
+**Helpers added:**
+- `_make_config(**overrides)` — builds PipelineConfig with test defaults, reduces boilerplate
+- `_backdate_feature(repo_id, feature_type, days_ago)` — inserts backdated feature_history record via direct SQL for simulating passage of time
+
+**Tests:** 12 integration tests (was 6), 503 total suite passing (was 497).
+
+### Step 7 — Review and cleanup (2026-03-07)
+
+Code review and cleanup to close Phase 2.
+
+**`repos_discovered` semantics:** Already fixed in Step 1 (`len(discovered)` instead of saved count). No change needed.
+
+**Type fix (`src/orchestrator/types.py`):**
+- Replaced `delivery_result: Any = None` with `delivery_result: Optional[DeliveryResult] = None`
+- Removed `Any` import, added `from delivery.types import DeliveryResult`
+
+**Dead code removal (`src/orchestrator/pipeline.py`):**
+- Removed unused imports: `TelegramAPIError`, `MessageTooLongError`
+- Simplified `except (MessageTooLongError, Exception)` → `except Exception` (redundant — `MessageTooLongError` is a subclass of `Exception`)
+
+**Exports verified:** `orchestrator/__init__.py` exports all 4 public names, no new public names added in Phase 2. All pipeline helpers are `_` prefixed (private).
+
+**Logging verified:** All 12 pipeline steps have appropriate logging (info for normal flow, error for failures, warning for non-fatal issues).
+
+**Tests:** 503 total suite passing (unchanged — cleanup only).
+
 ---
 
 ## Phase 1: Thin Orchestrator (Build)
