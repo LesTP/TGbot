@@ -44,7 +44,7 @@ Orchestrator records [FeatureRecord] via Storage
 | 3 | Orchestrator (thin) | ✅ Complete | Wire Discovery → Storage. First working pipeline segment — discover and persist repos. |
 | 4 | Summarization | ✅ Complete | Highest remaining uncertainty (LLM prompts, cost, response parsing). Validates before Delivery. |
 | 5 | Delivery | ✅ Complete | Completes end-to-end path. First user-visible output (Telegram message). |
-| 6 | Orchestrator (full) | 🔨 In Progress | Complete pipeline: dedup filtering, ranking rotation, digest assembly, feature history recording. |
+| 6 | Orchestrator (full) | ✅ Complete | Complete pipeline: dedup filtering, ranking rotation, digest assembly, feature history recording. |
 
 ## Coupling Notes
 
