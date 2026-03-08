@@ -76,30 +76,63 @@ def main():
         quick_hit_model="claude-haiku-4-5-20251001",
     )
 
-    # ── 2. Discovery ───────────────────────────────────────────────────
-    log.info("=== DISCOVERY ===")
-    log.info("Category: %s | Ranking: %s", category.name, ranking.value)
-
-    repos = discover_repos(category, ranking, limit=10, token=github_token)
-    log.info("Discovered %d repos:", len(repos))
-    for i, r in enumerate(repos, 1):
-        stars = r.source_metadata.get("stars", 0)
-        lang = r.source_metadata.get("primary_language", "?")
-        readme_len = len(r.raw_content)
-        print(f"  {i:2d}. {r.name:<40s} ⭐{stars:<8,d} 📝{readme_len:,d} chars  [{lang}]")
-
-    # ── 3. Storage ─────────────────────────────────────────────────────
+    # ── 2. Storage ─────────────────────────────────────────────────────
     log.info("=== STORAGE ===")
     db_path = str(Path(__file__).parent / "data" / "demo.db")
     os.makedirs(Path(db_path).parent, exist_ok=True)
     storage_init({"engine": "sqlite", "database": db_path})
     log.info("SQLite database: %s", db_path)
 
-    saved = []
-    for r in repos:
-        record = save_repo(r)
-        saved.append(record)
-    log.info("Saved %d repos to database", len(saved))
+    # ── 3. Discovery ───────────────────────────────────────────────────
+    # Check if we already have repos from a previous run
+    from storage.db import get_connection
+    conn = get_connection()
+    cursor = conn.execute("SELECT COUNT(*) FROM repos")
+    existing_count = cursor.fetchone()[0]
+
+    if existing_count > 0:
+        log.info("=== DISCOVERY (reusing %d repos from database) ===", existing_count)
+        cursor = conn.execute(
+            "SELECT id, source, source_id, name, url, description, "
+            "raw_content, source_metadata, discovered_at, "
+            "first_featured_at, last_featured_at, feature_count "
+            "FROM repos ORDER BY CAST(json_extract(source_metadata, '$.stars') AS INTEGER) DESC"
+        )
+        import json
+        from datetime import datetime
+        from storage.types import RepoRecord
+        saved = []
+        for row in cursor.fetchall():
+            saved.append(RepoRecord(
+                id=row[0], source=row[1], source_id=row[2],
+                name=row[3], url=row[4], description=row[5],
+                raw_content=row[6],
+                source_metadata=json.loads(row[7]) if row[7] else {},
+                discovered_at=datetime.now(), first_featured_at=None,
+                last_featured_at=None, feature_count=row[11],
+            ))
+        for i, r in enumerate(saved, 1):
+            stars = r.source_metadata.get("stars", 0)
+            lang = r.source_metadata.get("primary_language", "?")
+            readme_len = len(r.raw_content)
+            print(f"  {i:2d}. {r.name:<40s} ⭐{stars:<8,d} 📝{readme_len:,d} chars  [{lang}]")
+    else:
+        log.info("=== DISCOVERY ===")
+        log.info("Category: %s | Ranking: %s", category.name, ranking.value)
+
+        repos = discover_repos(category, ranking, limit=10, token=github_token)
+        log.info("Discovered %d repos:", len(repos))
+        for i, r in enumerate(repos, 1):
+            stars = r.source_metadata.get("stars", 0)
+            lang = r.source_metadata.get("primary_language", "?")
+            readme_len = len(r.raw_content)
+            print(f"  {i:2d}. {r.name:<40s} ⭐{stars:<8,d} 📝{readme_len:,d} chars  [{lang}]")
+
+        saved = []
+        for r in repos:
+            record = save_repo(r)
+            saved.append(record)
+        log.info("Saved %d repos to database", len(saved))
 
     # Pick top 1 for deep dive, next 3 for quick hits
     deep_repo = saved[0]
@@ -170,7 +203,8 @@ def main():
     log.info("=== DELIVERY ===")
     log.info("Sending to Telegram (channel: %s)...", channel_id)
 
-    result = send_digest(digest, channel_id, bot_token)
+    telegraph_token = os.environ.get("TELEGRAPH_ACCESS_TOKEN") or None
+    result = send_digest(digest, channel_id, bot_token, telegraph_token=telegraph_token)
 
     if result.success:
         log.info("✅ Delivered! Message ID: %s", result.message_id)
@@ -184,7 +218,7 @@ def main():
     print("\n" + "=" * 60)
     print("DEMO COMPLETE")
     print("=" * 60)
-    print(f"  Repos discovered:   {len(repos)}")
+    print(f"  Repos available:    {len(saved)}")
     print(f"  Deep dive:          {deep_repo.name}")
     print(f"  Quick hits:         {len(quick_results)}")
     print(f"  Telegram delivery:  {'✅ Success' if result.success else '❌ Failed: ' + str(result.error)}")
