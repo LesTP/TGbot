@@ -33,7 +33,7 @@ Generate AI-powered summaries for discovered repositories via a provider-agnosti
     provider: str          # e.g. "anthropic"
     api_key: str
     deep_dive_model: str   # e.g. "claude-sonnet-4-5-20250929"
-    quick_hit_model: str   # e.g. "claude-3-5-haiku-20241022"
+    quick_hit_model: str   # e.g. "claude-haiku-4-5-20251001"
   ```
 - recent_context (optional, from Orchestrator): list of dicts with repo_name, summary_content, date
 
@@ -67,7 +67,7 @@ config = LLMConfig(
     provider="anthropic",
     api_key="sk-...",
     deep_dive_model="claude-sonnet-4-5-20250929",
-    quick_hit_model="claude-3-5-haiku-20241022",
+    quick_hit_model="claude-haiku-4-5-20251001",
 )
 
 # Generate a deep dive for the featured repo

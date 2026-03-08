@@ -195,7 +195,7 @@ class TestBuildLLMConfig:
             config = _build_llm_config()
         assert config.provider == "anthropic"
         assert config.deep_dive_model == "claude-sonnet-4-5-20250929"
-        assert config.quick_hit_model == "claude-3-5-haiku-20241022"
+        assert config.quick_hit_model == "claude-haiku-4-5-20251001"
 
     def test_missing_api_key_raises(self):
         with patch.dict("os.environ", {}, clear=True):

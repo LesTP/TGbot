@@ -8,7 +8,7 @@ How to deploy, run, and maintain the GitHub Digest Bot.
 
 | Requirement | Verified |
 |-------------|----------|
-| SSH access to s501 | `ssh mikey@s501` |
+| SSH access to s501 | `ssh mikey@s501.sureserver.com` |
 | Python 3.11 in venv | `/home/mikey/private/tgbot/venv/bin/python` |
 | Outbound HTTPS | GitHub, Anthropic, Telegram all reachable |
 | Cron scheduler | Web UI (not CLI `crontab`) |
@@ -20,11 +20,18 @@ See `hosting_investigation/HOSTING_CHECKLIST.md` for the full viability report.
 
 | Key | Where to get it |
 |-----|-----------------|
-| `GITHUB_TOKEN` | github.com → Settings → Developer settings → Personal access tokens |
+| `GITHUB_TOKEN` | github.com → Settings → Developer settings → Personal access tokens (classic) → scope: `public_repo` |
 | `ANTHROPIC_API_KEY` | console.anthropic.com → API Keys |
 | `TELEGRAM_BOT_TOKEN` | Talk to @BotFather on Telegram → `/newbot` |
-| `TELEGRAM_CHANNEL_ID` | Your channel's `@username` or numeric ID (e.g. `@my_digest`) |
+| `TELEGRAM_CHANNEL_ID` | Create a channel, add bot as admin → use `@channel_handle` |
 | `TELEGRAPH_ACCESS_TOKEN` (optional) | Call the Telegraph API `createAccount` endpoint, or use `telegraph_client.create_account()` |
+
+### Telegram Channel Setup
+
+1. In Telegram, create a new channel (e.g., "GitHub Discovery")
+2. Choose **Public** and set a link (e.g., `t.me/github_discovery` → handle is `@github_discovery`)
+3. Add your bot as **admin** of the channel with "Post Messages" permission
+4. Use the `@handle` (e.g., `@github_discovery`) as your `TELEGRAM_CHANNEL_ID`
 
 ---
 
@@ -32,122 +39,80 @@ See `hosting_investigation/HOSTING_CHECKLIST.md` for the full viability report.
 
 ### 1. Upload the code
 
-From your local machine (PowerShell):
+From your local machine (PowerShell). **Use full absolute paths** — Windows OpenSSH does not expand `~` in SCP paths.
 
 ```powershell
-scp -r src/ mikey@s501:~/private/tgbot/src/
+# Upload src/ and entry-point to the server
+scp -r src mikey@s501.sureserver.com:/home/mikey/private/tgbot/
+scp run_daily.py mikey@s501.sureserver.com:/home/mikey/private/tgbot/run_daily.py
+scp .env mikey@s501.sureserver.com:/home/mikey/private/tgbot/.env
 ```
 
-Only `src/` is needed from the repo. The entry-point script (`run_daily.py`) is created on the server in step 4 below. Everything else — `tests/`, `github_search_investigation/`, `hosting_investigation/`, doc files (`ARCH_*.md`, `DEVPLAN_*.md`, `DEVLOG_*.md`), and `demo_pipeline.py` — is development-only and should not be deployed.
+> **SCP gotchas on Windows:**
+> - Always use `/home/mikey/private/tgbot/` — never `~/private/tgbot/` (Windows OpenSSH doesn't expand `~`)
+> - To upload a directory, target the **parent** path: `scp -r src server:/home/.../tgbot/` — not `.../tgbot/src/` (causes `src/src/` nesting)
+> - If the target directory doesn't exist, create it first: `ssh mikey@s501.sureserver.com "mkdir -p /home/mikey/private/tgbot/src"`
+
+Only `src/`, `run_daily.py`, and `.env` are needed on the server. Everything else — `tests/`, `github_search_investigation/`, `hosting_investigation/`, doc files, and `demo_pipeline.py` — is development-only and should not be deployed.
+
+After uploading, fix Windows line endings and set permissions on the server:
+
+```bash
+ssh mikey@s501.sureserver.com
+sed -i 's/\r$//' /home/mikey/private/tgbot/run_daily.py
+sed -i 's/\r$//' /home/mikey/private/tgbot/.env
+chmod 775 /home/mikey/private/tgbot/run_daily.py
+chmod 600 /home/mikey/private/tgbot/.env
+```
+
+The `sed` command converts CRLF → LF. Windows-created files have `\r\n` line endings that can corrupt API keys in `.env` and break the shebang in `run_daily.py`.
 
 ### 2. Install dependencies
 
 ```bash
-ssh mikey@s501
+ssh mikey@s501.sureserver.com
 source ~/private/tgbot/venv/bin/activate
 pip install requests anthropic python-dotenv
 ```
 
 `python-dotenv` is needed for `.env` file loading. If `requests` and `anthropic` are already installed from the hosting investigation, only `python-dotenv` is new.
 
-### 3. Create the `.env` file
+### 3. Configure the `.env` file
+
+The `.env` file is uploaded in step 1. Verify it's locked down and the `data/` directory exists:
 
 ```bash
-cat > ~/private/tgbot/.env << 'EOF'
-# Required
-GITHUB_TOKEN=ghp_your_token_here
-ANTHROPIC_API_KEY=sk-ant-your_key_here
-TELEGRAM_BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
-TELEGRAM_CHANNEL_ID=@your_channel_name
-
-# Storage
-DB_ENGINE=sqlite
-DB_PATH=/home/mikey/private/tgbot/data/bot.db
-
-# Optional: Telegraph for long deep dives
-# TELEGRAPH_ACCESS_TOKEN=your_telegraph_token
-
-# Optional: Override LLM model defaults
-# LLM_DEEP_DIVE_MODEL=claude-sonnet-4-5-20250929
-# LLM_QUICK_HIT_MODEL=claude-3-5-haiku-20241022
-EOF
-
 chmod 600 ~/private/tgbot/.env
 mkdir -p ~/private/tgbot/data
 ```
 
-**Important:** `chmod 600` ensures only your user can read the secrets.
-
-### 4. Create the production entry-point script
-
-Save this as `~/private/tgbot/run_daily.py`:
-
-```python
-#!/usr/bin/env python3
-"""Daily pipeline entry point for cron."""
-
-import io
-import sys
-import logging
-from pathlib import Path
-from dotenv import load_dotenv
-
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
-sys.path.insert(0, str(Path(__file__).parent / "src"))
-
-load_dotenv(Path(__file__).parent / ".env")
-
-from discovery.types import CategoryConfig
-from orchestrator import run_daily_pipeline, PipelineConfig
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
-    handlers=[
-        logging.FileHandler(Path(__file__).parent / "data" / "pipeline.log"),
-        logging.StreamHandler(),
-    ],
-)
-
-def main():
-    config = PipelineConfig(
-        category=CategoryConfig(
-            name="agentic-coding",
-            description="AI-powered coding tools and agents",
-            topics=["ai-coding-agent", "ai-coding-assistant"],
-            keywords=["agentic coding"],
-            expansion_topics=["llm-agent", "code-generation"],
-            min_stars=100,
-            min_readme_length=200,
-        ),
-        channel_id="@your_channel_name",
-        discovery_limit=20,
-    )
-
-    result = run_daily_pipeline(config)
-
-    if result.success:
-        logging.info(
-            "Pipeline succeeded: %d repos, %d summaries",
-            result.repos_discovered,
-            result.summaries_generated,
-        )
-    else:
-        logging.error("Pipeline failed: %s", result.errors)
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()
-```
-
-This uses the full orchestrator pipeline with dedup, tiered cooldown, ranking rotation, and feature history. See `ROADMAP.md` for how to configure the `CategoryConfig` and `PipelineConfig`.
-
-### 5. Test manually
+**Required variables:**
 
 ```bash
-ssh mikey@s501
+GITHUB_TOKEN=ghp_...
+ANTHROPIC_API_KEY=sk-ant-...
+TELEGRAM_BOT_TOKEN=123456:ABC...
+TELEGRAM_CHANNEL_ID=@github_discovery
+
+# These MUST be uncommented or the DB defaults to in-memory (data lost every run)
+DB_ENGINE=sqlite
+DB_PATH=/home/mikey/private/tgbot/data/bot.db
+```
+
+**Optional variables:**
+
+```bash
+TELEGRAPH_ACCESS_TOKEN=...              # For publishing long deep dives
+LLM_DEEP_DIVE_MODEL=claude-sonnet-4-5-20250929   # Override default model
+LLM_QUICK_HIT_MODEL=claude-haiku-4-5-20251001    # Override default model
+```
+
+**Important:** `chmod 600` ensures only your user can read the secrets. `DB_ENGINE` and `DB_PATH` must be uncommented — without them, the database runs in-memory and all history/dedup data is lost between runs.
+
+### 4. Test manually
+
+```bash
+ssh mikey@s501.sureserver.com
 cd ~/private/tgbot
 source venv/bin/activate
 python run_daily.py
@@ -155,14 +120,32 @@ python run_daily.py
 
 Watch the output. Check your Telegram channel. If the message arrives, you're ready for cron.
 
-### 6. Set up the cron job
+### 5. Set up the cron job
 
-Via the **web UI cron scheduler** (not `crontab -e`, which is blocked on s501):
+Via the **web UI cron scheduler** (not `crontab -e`, which is blocked on s501).
 
-- **Command:** `/home/mikey/private/tgbot/venv/bin/python /home/mikey/private/tgbot/run_daily.py`
-- **Schedule:** Once daily (e.g., 09:00 UTC)
+First, create a wrapper shell script on the server (the cron UI expects a single executable script, not a `python script.py` command):
 
-Full absolute paths are required — the web UI cron doesn't source `.bashrc`.
+```bash
+cat > /home/mikey/private/tgbot/run_cron.sh << 'EOF'
+#!/bin/bash
+cd /home/mikey/private/tgbot
+/home/mikey/private/tgbot/venv/bin/python /home/mikey/private/tgbot/run_daily.py
+EOF
+chmod 775 /home/mikey/private/tgbot/run_cron.sh
+```
+
+Then in the cron UI:
+
+- **Script:** `/home/mikey/private/tgbot/run_cron.sh`
+- **Schedule:** `1 6 * * *` (daily at 06:01 server time / 10:01 UTC)
+
+> **Timezone note:** The server runs on **EDT (UTC-4)**. Cron times are in server time. Check "Current server time" in the cron UI to confirm.
+
+> **Hosting panel requirements:**
+> - Scripts must have **read and execute permissions**: `chmod 775`
+> - Scripts must use **Unix-style line endings** (LF, not CRLF). Files uploaded from Windows need conversion: `sed -i 's/\r$//' filename`
+> - Apply the same line-ending fix to `.env` — CRLF can silently corrupt API keys with trailing `\r`
 
 ---
 
@@ -233,7 +216,8 @@ cp ~/private/tgbot/data/bot.db ~/private/tgbot/data/bot.db.bak
 Upload new files via `scp` and the next cron run picks them up:
 
 ```powershell
-scp -r src/ mikey@s501:~/private/tgbot/src/
+scp -r src mikey@s501.sureserver.com:/home/mikey/private/tgbot/
+scp run_daily.py mikey@s501.sureserver.com:/home/mikey/private/tgbot/run_daily.py
 ```
 
 No restart needed — each cron invocation starts a fresh Python process.
@@ -276,3 +260,5 @@ See `src/storage/schema.sql` for the full DDL.
 | Telegram "Bad Request: can't parse entities" | Markdown escaping bug | Check `data/pipeline.log` for the message content; report as a bug |
 | `permission denied` on cron | Wrong paths or missing venv | Use full absolute paths in cron command; verify venv exists |
 | `UnicodeEncodeError` | Console encoding on Windows | Already handled in entry-point (`io.TextIOWrapper`); shouldn't occur on Linux |
+| SCP `realpath ... No such file` | Windows SCP can't expand `~` or target dir missing | Use full absolute paths (`/home/mikey/...`); create target dirs via SSH first |
+| SCP creates nested `src/src/` | Destination path includes `src/` and dir already exists | Upload to parent: `scp -r src server:/home/.../tgbot/` (not `.../tgbot/src/`) |

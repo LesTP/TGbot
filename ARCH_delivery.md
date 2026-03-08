@@ -46,7 +46,7 @@ Format a Digest into a Telegram message and send it. Handles message constructio
     message_id: str | None   # Telegram message ID if sent
     error: str | None         # Error description if failed
   ```
-- Guarantees: If success is True, the message was accepted by Telegram's API. Message formatting handles the 4,096 character limit — if a Telegraph token is available and the deep dive is ≥1,000 chars, the full analysis is published to Telegraph and the Telegram message contains an excerpt with a link. Otherwise, deep dives are truncated with a "read more" link.
+- Guarantees: If success is True, the message was accepted by Telegram's API. Message formatting handles the 4,096 character limit — if a Telegraph token is available and the deep dive is ≥1,000 chars, the full analysis is published to Telegraph and the Telegram message contains an excerpt with a link. Otherwise, deep dives are truncated with a "read more" link. When truncation is needed and a Telegraph URL exists, the "read more" link points to the Telegraph article; otherwise it links to the GitHub repo.
 
 ## State
 None. Delivery is stateless.

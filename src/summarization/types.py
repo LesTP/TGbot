@@ -25,7 +25,7 @@ class LLMConfig:
     provider: str  # e.g. "anthropic"
     api_key: str
     deep_dive_model: str  # e.g. "claude-sonnet-4-5-20250929"
-    quick_hit_model: str  # e.g. "claude-3-5-haiku-20241022"
+    quick_hit_model: str  # e.g. "claude-haiku-4-5-20251001"
 
 
 # ---------------------------------------------------------------------------

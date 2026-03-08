@@ -1,7 +1,16 @@
+# Secrets
 .env
-*.db
+
+# Python
 __pycache__/
 *.pyc
+*.pyo
+.pytest_cache/
+
+# Data
+data/*.db
+data/*.db.bak
+data/*.log
+
+# Virtual environment
 venv/
-.venv/
-data/

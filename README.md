@@ -166,7 +166,7 @@ The bot uses a two-tier model strategy to optimize cost:
 | Summary type | Default model | Rationale |
 |-------------|---------------|-----------|
 | Deep dive | `claude-sonnet-4-5-20250929` | Higher quality for longer analysis |
-| Quick hit | `claude-3-5-haiku-20241022` | Fast and cheap for short summaries |
+| Quick hit | `claude-haiku-4-5-20251001` | Fast and cheap for short summaries |
 
 Models are configurable via environment variables.
 
@@ -272,7 +272,7 @@ DB_PATH=./data/bot.db
 # Optional
 TELEGRAPH_ACCESS_TOKEN=...           # For long deep dives
 LLM_DEEP_DIVE_MODEL=claude-sonnet-4-5-20250929
-LLM_QUICK_HIT_MODEL=claude-3-5-haiku-20241022
+LLM_QUICK_HIT_MODEL=claude-haiku-4-5-20251001
 ```
 
 ### Run

@@ -40,7 +40,7 @@ Technical professionals actively working in specific domains who want passive di
 ## Constraints
 - **Language:** Python 3.9+
 - **APIs:** GitHub REST API v3, Anthropic API (Claude models), Telegram Bot API
-- **Database:** MySQL/MariaDB
+- **Database:** SQLite (production default; MySQL/MariaDB supported for multi-writer scenarios)
 - **Hosting:** Existing paid host (WordPress server, s501) — Python 3.11 verified, virtual environment required (PEP 668), cron via web UI scheduler. Bot location: `/home/mikey/private/tgbot/`
 - **Cost:** Monthly LLM budget <$15 (estimated $0.15-0.40/day for 1 deep + 3 quick)
 - **Rate limits:** GitHub API 5,000 requests/hour with token; Anthropic API per-plan limits
@@ -91,8 +91,8 @@ Lessons learned during environment investigation. Reference these when setting u
 |-------|----------|
 | Cannot create directories in `~/` | Home dir owned by root. Use `~/private/` instead (owned by mikey) |
 | `pip install` fails with "externally-managed-environment" | PEP 668 on modern Debian/Ubuntu. Use virtual environment: `python3 -m venv venv && source venv/bin/activate` |
-| `crontab -e` permission denied | CLI crontab blocked. Use web UI cron scheduler in hosting control panel |
-| Cron job "command not found" | Web UI needs full absolute paths: `/home/mikey/private/tgbot/venv/bin/python /home/mikey/private/tgbot/script.py` |
+| `crontab -e` permission denied | CLI crontab blocked. Use web UI cron scheduler. Script needs Unix line endings (LF) and execute permissions (`chmod 775`) |
+| Cron job "command not found" | Web UI expects a script path, not a command. Use a wrapper shell script (`run_cron.sh`) with full absolute paths. See DEPLOY.md |
 
 ### Local Development (Windows)
 
@@ -101,6 +101,10 @@ Lessons learned during environment investigation. Reference these when setting u
 | `pip` not recognized | Use `py -m pip install package` instead |
 | `python -m pytest` fails (no module named pytest) | Use `py -m pytest` — the `py` launcher finds the Python that has pytest installed |
 | Unicode/emoji print errors (cp1252 codec) | Add at top of script: `sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')` |
+| SCP doesn't expand `~` in paths | Windows OpenSSH doesn't resolve `~`. Use absolute paths: `/home/mikey/private/tgbot/` |
+| SCP creates nested `src/src/` | `scp -r src/ host:path/src/` nests source inside destination. Upload to parent: `scp -r src host:path/tgbot/` |
+| SCP target dir doesn't exist | Windows SCP can't create nested dirs. Create first via SSH: `ssh host "mkdir -p /path/to/dir"` |
+| CRLF line endings corrupt server files | Files created on Windows have `\r\n`. Fix on server: `sed -i 's/\r$//' filename`. Critical for `.env` (API keys get trailing `\r`) and shebangs |
 
 ### GitHub API
 
@@ -118,3 +122,6 @@ Lessons learned during environment investigation. Reference these when setting u
 | 2026-03-05 | Hosting viability verified | SSH tested, Python 3.11 confirmed, venv/pip work, outbound HTTPS works, cron via web UI works. Risk resolved. |
 | 2026-03-05 | GitHub search coverage verified | 1,373 unique repos found, 853 high-quality. Volume exceeds requirements. Seed list recommended for known tools with poor tagging. Risk resolved. |
 | 2026-03-05 | Added Setup Gotchas section | Documented environment-specific issues and workarounds discovered during investigation. |
+| 2026-03-08 | Deployed to production | Pipeline live on s501.sureserver.com, cron at 06:01 EDT daily. Channel: `@github_discovery`. See DEPLOY.md. |
+| 2026-03-08 | Database constraint updated | SQLite is the production default (not MySQL). MySQL supported but unnecessary for single-writer cron. |
+| 2026-03-08 | Production fixes | Model default `claude-3-5-haiku` → `claude-haiku-4-5` (old returned 404). Telegraph API requires Node array format (not HTML). Truncation preserves Telegraph URL. CRLF/permissions fixes. |

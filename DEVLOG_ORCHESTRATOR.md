@@ -45,7 +45,7 @@ Added pipeline steps 4–5: query feature history, filter recently featured repo
 Wired summarization into the pipeline: LLM config from env vars, recent-context conversion, deep-dive generation with fallback, quick-hit generation with skip-on-failure, and summary persistence.
 
 **New helpers (`src/orchestrator/pipeline.py`):**
-- `_build_llm_config()` — reads `ANTHROPIC_API_KEY` (required), `LLM_PROVIDER` (default "anthropic"), `LLM_DEEP_DIVE_MODEL` (default "claude-sonnet-4-5-20250929"), `LLM_QUICK_HIT_MODEL` (default "claude-3-5-haiku-20241022")
+- `_build_llm_config()` — reads `ANTHROPIC_API_KEY` (required), `LLM_PROVIDER` (default "anthropic"), `LLM_DEEP_DIVE_MODEL` (default "claude-sonnet-4-5-20250929"), `LLM_QUICK_HIT_MODEL` (default "claude-haiku-4-5-20251001")
 - `_build_recent_context(summary_records)` — converts `list[SummaryRecord]` → `list[dict]` with keys `repo_name`, `summary_content`, `date`. Joins repo name via `storage.get_repo()`, falls back to `"repo-{id}"` if repo not found
 - `_generate_deep_dive_with_fallback(candidates, remaining, config, context, errors)` — tries candidates in order, on any summarization error logs and tries next. If initial candidates exhausted, tries remaining eligible repos. Returns `(repo, SummaryResult)` or `None`
 - `_generate_quick_hits(candidates, config, errors)` — generates per candidate, skips failures, returns `list[(repo, SummaryResult)]`
@@ -162,6 +162,35 @@ Code review and cleanup to close Phase 2.
 **Logging verified:** All 12 pipeline steps have appropriate logging (info for normal flow, error for failures, warning for non-fatal issues).
 
 **Tests:** 503 total suite passing (unchanged — cleanup only).
+
+---
+
+## Phase 3: Production Deployment (2026-03-08)
+
+### Quick-hit model fix
+
+**What was done:**
+- Default `LLM_QUICK_HIT_MODEL` in `_build_llm_config()` changed from `claude-3-5-haiku-20241022` to `claude-haiku-4-5-20251001`. The old model returned HTTP 404 from Anthropic's API — it was not available on the production account (verified via `models.json`).
+
+**Test count:** 1 test updated (`test_defaults_for_optional_vars`), 570 total passing.
+
+### Production entry point and deployment
+
+**What was done:**
+- Created `run_daily.py` — production entry point. Inserts `src/` into `sys.path`, loads `.env` via `python-dotenv`, configures dual logging (file + stderr), runs `run_daily_pipeline()` with `CategoryConfig` for "agentic-coding" category, `channel_id="@github_discovery"`.
+- Created `run_cron.sh` on server — shell wrapper for web UI cron scheduler. Sets working directory and invokes venv Python.
+- Created `.gitignore` — protects `.env`, `__pycache__/`, `data/*.db`, `data/*.log`, `venv/`.
+- Fixed `.env`: uncommented `DB_ENGINE=sqlite` and `DB_PATH=...` — without these, pipeline defaulted to in-memory SQLite, losing all dedup/cooldown history.
+- Deployed to `s501.sureserver.com:/home/mikey/private/tgbot/`.
+- Cron: `1 6 * * *` (06:01 EDT = 10:01 UTC daily).
+
+### Deployment gotchas (documented in DEPLOY.md)
+- Windows SCP doesn't expand `~` — use absolute paths
+- `scp -r src/ host:path/src/` creates nested `src/src/` — upload to parent instead
+- CRLF line endings from Windows corrupt `.env` keys and shebangs — `sed -i 's/\r$//'`
+- `chmod 775` required for cron scripts
+- Server timezone is EDT (UTC-4), not UTC
+- Full hostname `s501.sureserver.com` required (not just `s501`)
 
 ---
 

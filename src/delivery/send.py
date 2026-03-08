@@ -97,7 +97,8 @@ def send_digest(
 
     if len(message) > TELEGRAM_MAX_LENGTH:
         message = truncate_for_telegram(
-            message, digest.deep_dive.repo_url, TELEGRAM_MAX_LENGTH
+            message, digest.deep_dive.repo_url, TELEGRAM_MAX_LENGTH,
+            telegraph_url=telegraph_url,
         )
 
     if len(message) > TELEGRAM_MAX_LENGTH:

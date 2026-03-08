@@ -192,7 +192,7 @@ class TestCreatePageSuccess:
         payload = mock_post.call_args[1]["json"]
         assert payload["title"] == "My Title"
 
-    def test_sends_html_content_as_string(self, client):
+    def test_sends_content_as_node_array(self, client):
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -202,7 +202,7 @@ class TestCreatePageSuccess:
         with patch("delivery.telegraph_client.requests.post", return_value=mock_response) as mock_post:
             client.create_page("Title", "<p>HTML content</p>")
         payload = mock_post.call_args[1]["json"]
-        assert payload["content"] == "<p>HTML content</p>"
+        assert payload["content"] == [{"tag": "p", "children": ["HTML content"]}]
 
     def test_sends_author_name(self, client):
         mock_response = MagicMock()

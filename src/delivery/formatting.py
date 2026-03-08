@@ -157,7 +157,8 @@ def format_digest(digest: Digest, telegraph_url: str | None = None) -> str:
 
 
 def truncate_for_telegram(
-    message: str, repo_url: str, max_length: int = 4096
+    message: str, repo_url: str, max_length: int = 4096,
+    telegraph_url: str | None = None,
 ) -> str:
     """Truncate a formatted message to fit Telegram's character limit.
 
@@ -168,11 +169,15 @@ def truncate_for_telegram(
     The truncation target is the deep dive body — the text after the
     "View on GitHub" link line inside the DEEP DIVE section. Header,
     metadata, and quick hits are preserved intact.
+
+    If telegraph_url is provided, the "Read more" link points to the
+    Telegraph article instead of the GitHub repo.
     """
     if len(message) <= max_length:
         return message
 
-    read_more = f"\n\n[Read more]({escape_url(repo_url)})"
+    read_more_target = telegraph_url or repo_url
+    read_more = f"\n\n[Read more]({escape_url(read_more_target)})"
     read_more_len = len(read_more)
 
     # Find the deep dive content boundary: the blank line after the

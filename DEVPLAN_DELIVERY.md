@@ -17,7 +17,7 @@
 
 ## Current Status
 
-**Phase:** 2 — Formatting Improvements — COMPLETE
+**Phase:** 2 — Formatting Improvements — COMPLETE; Phase 3 — Production Deployment Fixes — COMPLETE
 **Blocked/Broken:** Nothing
 
 ---
@@ -38,3 +38,12 @@ Steps 1–4 implemented: Telegraph client, quick-hit layout, Telegraph wiring in
 - D-5: Telegraph token via env var (`TELEGRAPH_ACCESS_TOKEN`). `api.telegra.ph` blocked on corporate network; all dev/test uses mocked HTTP. Real calls only on deployment server.
 
 **Deferred:** Visual review of Telegram output on production server (Telegraph blocked on dev machine).
+
+---
+
+## Phase 3: Production Deployment Fixes — COMPLETE
+
+Telegraph Node format fix + truncation telegraph_url passthrough. 0 new tests (2 updated), 570 project total. See DEVLOG_DELIVERY.md Phase 3 for full details.
+
+**Decisions:**
+- D-6: Telegraph API requires Node array format in `content` field, not HTML strings. The `html_content` form-data parameter does not work in practice. (Closed)

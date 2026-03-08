@@ -5,7 +5,9 @@ Publishes long-form content to Telegraph (telegra.ph) so deep-dive
 summaries can be read in full instead of being truncated in Telegram.
 """
 
+import json
 import re
+from html.parser import HTMLParser
 
 import requests
 
@@ -84,6 +86,48 @@ def _linkify_urls(text: str) -> str:
     )
 
 
+class _NodeParser(HTMLParser):
+    """Parse Telegraph HTML into the Node array format the API expects.
+
+    Telegraph Node format:
+      - A plain string is a text node
+      - An element is {"tag": "...", "children": [...]}
+      - An element with attributes: {"tag": "...", "attrs": {...}, "children": [...]}
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.nodes: list = []
+        self._stack: list[list] = [self.nodes]
+
+    def handle_starttag(self, tag, attrs):
+        node: dict = {"tag": tag}
+        if attrs:
+            node["attrs"] = dict(attrs)
+        node["children"] = []
+        self._stack[-1].append(node)
+        self._stack.append(node["children"])
+
+    def handle_endtag(self, tag):
+        if len(self._stack) > 1:
+            self._stack.pop()
+
+    def handle_data(self, data):
+        if data:
+            self._stack[-1].append(data)
+
+
+def html_to_nodes(html: str) -> list:
+    """Convert Telegraph HTML to the Node array format required by the API.
+
+    The Telegraph createPage endpoint's ``content`` field requires a JSON
+    array of Node objects, not an HTML string.
+    """
+    parser = _NodeParser()
+    parser.feed(html)
+    return parser.nodes
+
+
 def _telegraph_post(url: str, payload: dict) -> dict:
     """Make a POST request to the Telegraph API.
 
@@ -143,6 +187,9 @@ class TelegraphClient:
     ) -> str:
         """Publish an HTML page to Telegraph.
 
+        Converts html_content to the Node array format required by the
+        Telegraph API, then posts via createPage.
+
         Args:
             title: Page title (1-256 characters).
             html_content: Page body in Telegraph's HTML subset.
@@ -159,7 +206,7 @@ class TelegraphClient:
         payload = {
             "access_token": self._access_token,
             "title": title,
-            "content": html_content,
+            "content": html_to_nodes(html_content),
             "author_name": author_name,
             "author_url": author_url,
             "return_content": False,

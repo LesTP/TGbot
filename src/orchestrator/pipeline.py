@@ -62,7 +62,7 @@ def _build_llm_config() -> LLMConfig:
         provider=os.environ.get("LLM_PROVIDER", "anthropic"),
         api_key=os.environ["ANTHROPIC_API_KEY"],
         deep_dive_model=os.environ.get("LLM_DEEP_DIVE_MODEL", "claude-sonnet-4-5-20250929"),
-        quick_hit_model=os.environ.get("LLM_QUICK_HIT_MODEL", "claude-3-5-haiku-20241022"),
+        quick_hit_model=os.environ.get("LLM_QUICK_HIT_MODEL", "claude-haiku-4-5-20251001"),
     )
 
 

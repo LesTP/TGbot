@@ -185,7 +185,7 @@ Override via environment variables (no code change):
 ```bash
 # In .env:
 LLM_DEEP_DIVE_MODEL=claude-sonnet-4-5-20250929
-LLM_QUICK_HIT_MODEL=claude-3-5-haiku-20241022
+LLM_QUICK_HIT_MODEL=claude-haiku-4-5-20251001
 ```
 
 Or set them directly in `LLMConfig` if using `demo_pipeline.py`.
@@ -268,12 +268,14 @@ Issues identified during the full codebase review. Organized by priority.
 
 ### High Priority — Before Production
 
-| # | Issue | Module | Description |
-|---|-------|--------|-------------|
-| 1 | Missing database indexes | Storage | No explicit indexes beyond primary keys. `get_featured_repo_ids()` and `get_recent_summaries()` will slow with scale. Add indexes on `summaries(repo_id)`, `summaries(generated_at)`, `feature_history(repo_id)`, `feature_history(featured_date)`. |
-| 2 | No MySQL integration tests | Storage | All tests run against in-memory SQLite. The `ON DUPLICATE KEY` MySQL path is untested. Add a CI job with test MySQL, or at minimum a marked integration test. |
-| 3 | Deferred Discovery integration test | Discovery | Step 8 (real GitHub API test) was deferred because `GITHUB_TOKEN` isn't in the test env. Implement with `@pytest.mark.skipif(not os.environ.get("GITHUB_TOKEN"))` before first real pipeline run. |
-| 4 | `storage.close()` not called in pipeline | Orchestrator | The pipeline initializes storage but never closes it. Add `storage.close()` in a `finally` block or at pipeline end. |
+| # | Issue | Module | Status |
+|---|-------|--------|--------|
+| 1 | Missing database indexes | Storage | Open — no performance issues at current scale (<100 repos), but add indexes before data grows significantly |
+| 2 | No MySQL integration tests | Storage | Open — not urgent since production uses SQLite. Only relevant if MySQL is adopted |
+| 3 | Deferred Discovery integration test | Discovery | Open — `@pytest.mark.skipif` test not yet written |
+| 4 | `storage.close()` not called in pipeline | Orchestrator | Open — minor (SQLite auto-closes on process exit in cron) |
+
+> **Post-deployment note (2026-03-08):** The pipeline is running successfully in production with SQLite. Items 1–4 are now lower priority since: (1) data volume is small (~20 repos/day), (2) MySQL is not in use, (3) the real GitHub API is exercised by daily cron, and (4) cron processes exit cleanly. These remain valid improvements but are no longer blocking.
 
 ### Medium Priority — Soon After Shipping
 
@@ -294,7 +296,7 @@ Issues identified during the full codebase review. Organized by priority.
 | 12 | `SeedRepo.full_name` not validated | Discovery | `split("/")` on malformed input raises `ValueError` at runtime instead of config time. Add validation in `__post_init__`. |
 | 13 | Untyped `dict` returns | Summarization | `token_usage: dict` could be a `TypedDict` for better IDE support and static analysis. |
 | 14 | No `since_days` validation | Storage | Negative or zero values produce semantically undefined queries. Add `if since_days <= 0: raise ValueError(...)`. |
-| 15 | `models.json` not integrated | Orchestrator | Model versions are hardcoded in `pipeline.py`. The JSON file exists but isn't consumed. Either integrate it or document it as reference-only. |
+| 15 | `models.json` not integrated | Orchestrator | Model versions are hardcoded in `pipeline.py`. The JSON file exists but isn't consumed. Either integrate it or document it as reference-only. **Deployment note (2026-03-08):** The old default `claude-3-5-haiku-20241022` returned 404 — it was unavailable on the production account. `models.json` was used to identify `claude-haiku-4-5-20251001` as the correct replacement. Integrating `models.json` at runtime would prevent this class of issue. |
 
 ---
 

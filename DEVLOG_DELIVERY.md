@@ -238,4 +238,38 @@ Should-fix:
 - `src/delivery/send.py` — +telegraph_token param*, +_try_publish_telegraph*, Telegraph→format_digest wiring*
 - `src/delivery/telegram_client.py` — unchanged
 - `src/delivery/__init__.py` — +TelegraphAPIError export*
+
+## Phase 3: Production Deployment Fixes (2026-03-08)
+
+### Telegraph Node format fix
+
+**What was done:**
+- Telegraph API rejects `content` when given an HTML string — it requires a **JSON array of Node objects**. The `html_content` form-data approach also failed (`CONTENT_REQUIRED`).
+- Added `_NodeParser(HTMLParser)` class and `html_to_nodes(html)` function to `src/delivery/telegraph_client.py`. Parses `<p>`, `<b>`, `<a>` tags into Telegraph's Node format: `[{"tag": "p", "children": ["text", {"tag": "b", ...}]}]`.
+- `create_page()` now passes `content: html_to_nodes(html_content)` as a Python list via `json=payload` — `requests` serializes the nested structure correctly.
+- Reverted from `data=payload` (form encoding) back to `json=payload` — the Node array needs proper JSON serialization.
+
+**Decisions:**
+- D-6: Telegraph API requires Node format, not HTML. The `html_content` parameter documented in some Telegraph references does not work in practice. Closed.
+
+**Issues:**
+- First attempt: changed `content` → `html_content` key (error changed from `CONTENT_FORMAT_INVALID` to `CONTENT_REQUIRED`).
+- Second attempt: switched `json=` → `data=` (form encoding) — same `CONTENT_REQUIRED` error.
+- Root cause: Telegraph API only accepts `content` as a JSON Node array. HTML string is never accepted regardless of key name or encoding method.
+
+**Test count:** 570 total passing (test updated: `test_sends_html_content_as_string` → `test_sends_content_as_node_array`).
+
+### Truncation telegraph_url passthrough
+
+**What was done:**
+- `truncate_for_telegram()` in `formatting.py` gained optional `telegraph_url: str | None = None` parameter. When provided, the "Read more" link points to the Telegraph article instead of the GitHub repo URL.
+- `send_digest()` in `send.py` now passes `telegraph_url=telegraph_url` to `truncate_for_telegram()`.
+- Previously, if Telegraph publish succeeded but the message with excerpt + quick hits still exceeded 4096 chars, truncation would overwrite the Telegraph link with a GitHub link.
+
+**Test count:** 570 total passing (unchanged — existing truncation tests still pass).
+
+### Files changed:
+- `src/delivery/telegraph_client.py` — +`_NodeParser`, +`html_to_nodes()`, `create_page` uses Node array, back to `json=payload`
+- `src/delivery/formatting.py` — `truncate_for_telegram` gains `telegraph_url` param
+- `src/delivery/send.py` — passes `telegraph_url` to `truncate_for_telegram`
 - `src/orchestrator/pipeline.py` — +TELEGRAPH_ACCESS_TOKEN env read*
