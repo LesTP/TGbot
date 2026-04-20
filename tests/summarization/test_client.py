@@ -7,7 +7,7 @@ import httpx
 import pytest
 
 from summarization.client import AnthropicProvider, LLMProvider, create_provider
-from summarization.types import LLMAPIError, LLMConfig, LLMResponseError
+from summarization.types import LLMAPIError, LLMConfig, LLMResponse, LLMResponseError
 
 
 # ---------------------------------------------------------------------------
@@ -38,6 +38,20 @@ def _make_httpx_response(status_code, headers=None):
     return httpx.Response(status_code, headers=headers or {}, request=req)
 
 
+def _make_config(**overrides):
+    """Create an LLMConfig with sensible test defaults."""
+    defaults = {
+        "provider": "anthropic",
+        "api_key": "sk-test",
+        "models": {
+            "quality": "claude-sonnet-4-5-20250929",
+            "commodity": "claude-3-5-haiku-20241022",
+        },
+    }
+    defaults.update(overrides)
+    return LLMConfig(**defaults)
+
+
 # ---------------------------------------------------------------------------
 # LLMProvider ABC
 # ---------------------------------------------------------------------------
@@ -61,7 +75,7 @@ class TestLLMProviderABC:
     def test_subclass_with_call_can_instantiate(self):
         class DummyProvider(LLMProvider):
             def call(self, model, system_prompt, user_prompt, max_tokens):
-                return {}
+                return LLMResponse(content="", model=model, provider="dummy", token_usage={})
 
         provider = DummyProvider()
         assert isinstance(provider, LLMProvider)
@@ -73,8 +87,8 @@ class TestLLMProviderABC:
 
 
 class TestAnthropicProviderSuccess:
-    @patch("summarization.client.anthropic.Anthropic")
-    def test_returns_expected_dict_shape(self, mock_anthropic_cls):
+    @patch("anthropic.Anthropic")
+    def test_returns_llm_response(self, mock_anthropic_cls):
         mock_client = MagicMock()
         mock_anthropic_cls.return_value = mock_client
         mock_client.messages.create.return_value = _make_mock_response(
@@ -92,12 +106,14 @@ class TestAnthropicProviderSuccess:
             max_tokens=2000,
         )
 
-        assert result["content"] == "This is a deep dive summary."
-        assert result["model"] == "claude-sonnet-4-5-20250929"
-        assert result["usage"]["input_tokens"] == 1200
-        assert result["usage"]["output_tokens"] == 800
+        assert isinstance(result, LLMResponse)
+        assert result.content == "This is a deep dive summary."
+        assert result.model == "claude-sonnet-4-5-20250929"
+        assert result.provider == "anthropic"
+        assert result.token_usage["input_tokens"] == 1200
+        assert result.token_usage["output_tokens"] == 800
 
-    @patch("summarization.client.anthropic.Anthropic")
+    @patch("anthropic.Anthropic")
     def test_passes_correct_params_to_api(self, mock_anthropic_cls):
         mock_client = MagicMock()
         mock_anthropic_cls.return_value = mock_client
@@ -118,14 +134,14 @@ class TestAnthropicProviderSuccess:
             max_tokens=500,
         )
 
-    @patch("summarization.client.anthropic.Anthropic")
+    @patch("anthropic.Anthropic")
     def test_api_key_passed_to_client(self, mock_anthropic_cls):
         AnthropicProvider(api_key="sk-my-secret-key")
         mock_anthropic_cls.assert_called_once_with(api_key="sk-my-secret-key")
 
 
 class TestAnthropicProviderErrors:
-    @patch("summarization.client.anthropic.Anthropic")
+    @patch("anthropic.Anthropic")
     def test_rate_limit_raises_llm_api_error_with_retry(self, mock_anthropic_cls):
         mock_client = MagicMock()
         mock_anthropic_cls.return_value = mock_client
@@ -142,7 +158,7 @@ class TestAnthropicProviderErrors:
         assert exc_info.value.status_code == 429
         assert exc_info.value.retry_after == 30.0
 
-    @patch("summarization.client.anthropic.Anthropic")
+    @patch("anthropic.Anthropic")
     def test_rate_limit_without_retry_header(self, mock_anthropic_cls):
         mock_client = MagicMock()
         mock_anthropic_cls.return_value = mock_client
@@ -159,7 +175,7 @@ class TestAnthropicProviderErrors:
         assert exc_info.value.status_code == 429
         assert exc_info.value.retry_after is None
 
-    @patch("summarization.client.anthropic.Anthropic")
+    @patch("anthropic.Anthropic")
     def test_auth_error_raises_llm_api_error(self, mock_anthropic_cls):
         mock_client = MagicMock()
         mock_anthropic_cls.return_value = mock_client
@@ -175,7 +191,7 @@ class TestAnthropicProviderErrors:
 
         assert exc_info.value.status_code == 401
 
-    @patch("summarization.client.anthropic.Anthropic")
+    @patch("anthropic.Anthropic")
     def test_server_error_raises_llm_api_error(self, mock_anthropic_cls):
         mock_client = MagicMock()
         mock_anthropic_cls.return_value = mock_client
@@ -191,7 +207,7 @@ class TestAnthropicProviderErrors:
 
         assert exc_info.value.status_code == 500
 
-    @patch("summarization.client.anthropic.Anthropic")
+    @patch("anthropic.Anthropic")
     def test_connection_error_raises_llm_api_error_no_status(self, mock_anthropic_cls):
         mock_client = MagicMock()
         mock_anthropic_cls.return_value = mock_client
@@ -208,7 +224,7 @@ class TestAnthropicProviderErrors:
         assert exc_info.value.status_code is None
         assert exc_info.value.retry_after is None
 
-    @patch("summarization.client.anthropic.Anthropic")
+    @patch("anthropic.Anthropic")
     def test_empty_content_list_raises_response_error(self, mock_anthropic_cls):
         mock_client = MagicMock()
         mock_anthropic_cls.return_value = mock_client
@@ -221,7 +237,7 @@ class TestAnthropicProviderErrors:
         with pytest.raises(LLMResponseError):
             provider.call("model", "system", "user", 100)
 
-    @patch("summarization.client.anthropic.Anthropic")
+    @patch("anthropic.Anthropic")
     def test_empty_text_raises_response_error(self, mock_anthropic_cls):
         mock_client = MagicMock()
         mock_anthropic_cls.return_value = mock_client
@@ -244,32 +260,17 @@ class TestAnthropicProviderErrors:
 
 class TestCreateProvider:
     def test_anthropic_returns_anthropic_provider(self):
-        config = LLMConfig(
-            provider="anthropic",
-            api_key="sk-test",
-            deep_dive_model="claude-sonnet-4-5-20250929",
-            quick_hit_model="claude-3-5-haiku-20241022",
-        )
+        config = _make_config()
         provider = create_provider(config)
         assert isinstance(provider, AnthropicProvider)
         assert isinstance(provider, LLMProvider)
 
     def test_unknown_provider_raises_value_error(self):
-        config = LLMConfig(
-            provider="unknown-llm",
-            api_key="key",
-            deep_dive_model="model",
-            quick_hit_model="model",
-        )
+        config = _make_config(provider="unknown-llm")
         with pytest.raises(ValueError, match="Unknown LLM provider"):
             create_provider(config)
 
     def test_error_message_includes_provider_name(self):
-        config = LLMConfig(
-            provider="google",
-            api_key="key",
-            deep_dive_model="model",
-            quick_hit_model="model",
-        )
-        with pytest.raises(ValueError, match="google"):
+        config = _make_config(provider="deepseek")
+        with pytest.raises(ValueError, match="deepseek"):
             create_provider(config)

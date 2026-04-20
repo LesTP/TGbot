@@ -187,15 +187,15 @@ class TestBuildLLMConfig:
             config = _build_llm_config()
         assert config.provider == "anthropic"
         assert config.api_key == "sk-test-key"
-        assert config.deep_dive_model == "test-deep-model"
-        assert config.quick_hit_model == "test-quick-model"
+        assert config.models["quality"] == "test-deep-model"
+        assert config.models["commodity"] == "test-quick-model"
 
     def test_defaults_for_optional_vars(self):
         with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-key"}, clear=True):
             config = _build_llm_config()
         assert config.provider == "anthropic"
-        assert config.deep_dive_model == "claude-sonnet-4-5-20250929"
-        assert config.quick_hit_model == "claude-haiku-4-5-20251001"
+        assert config.models["quality"] == "claude-sonnet-4-5-20250929"
+        assert config.models["commodity"] == "claude-haiku-4-5-20251001"
 
     def test_missing_api_key_raises(self):
         with patch.dict("os.environ", {}, clear=True):

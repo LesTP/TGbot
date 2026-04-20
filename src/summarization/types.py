@@ -1,35 +1,24 @@
 """
 Summarization module types.
 
-Data types for the Summarization module's public API: configuration,
-result shapes, and error types. See ARCH_summarization.md for contracts.
+LLM infrastructure types (LLMConfig, LLMResponse, LLMAPIError,
+LLMResponseError) are re-exported from toolkit.llm_client.
+TGbot-specific types (SummaryResult, InsufficientContentError)
+remain here.
 """
 
 from dataclasses import dataclass
-from typing import Optional
+
+from toolkit.llm_client import (  # noqa: F401
+    LLMAPIError,
+    LLMConfig,
+    LLMResponse,
+    LLMResponseError,
+)
 
 
 # ---------------------------------------------------------------------------
-# Configuration types
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class LLMConfig:
-    """Configuration for the LLM provider.
-
-    Carries provider selection, credentials, and per-tier model names.
-    Passed into generate functions — no env var reads inside the module.
-    """
-
-    provider: str  # e.g. "anthropic"
-    api_key: str
-    deep_dive_model: str  # e.g. "claude-sonnet-4-5-20250929"
-    quick_hit_model: str  # e.g. "claude-haiku-4-5-20251001"
-
-
-# ---------------------------------------------------------------------------
-# Result types
+# TGbot-specific result types
 # ---------------------------------------------------------------------------
 
 
@@ -47,31 +36,8 @@ class SummaryResult:
 
 
 # ---------------------------------------------------------------------------
-# Error types
+# TGbot-specific error types
 # ---------------------------------------------------------------------------
-
-
-class LLMAPIError(Exception):
-    """LLM API call failed (rate limit, auth, network)."""
-
-    def __init__(
-        self,
-        message: str,
-        status_code: Optional[int] = None,
-        retry_after: Optional[float] = None,
-    ):
-        super().__init__(message)
-        self.message = message
-        self.status_code = status_code
-        self.retry_after = retry_after
-
-
-class LLMResponseError(Exception):
-    """LLM API returned successfully but response couldn't be parsed or was empty."""
-
-    def __init__(self, message: str):
-        super().__init__(message)
-        self.message = message
 
 
 class InsufficientContentError(Exception):

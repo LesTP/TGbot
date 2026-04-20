@@ -16,29 +16,39 @@ class TestLLMConfig:
         config = LLMConfig(
             provider="anthropic",
             api_key="sk-test-key",
-            deep_dive_model="claude-sonnet-4-5-20250929",
-            quick_hit_model="claude-3-5-haiku-20241022",
+            models={
+                "quality": "claude-sonnet-4-5-20250929",
+                "commodity": "claude-3-5-haiku-20241022",
+            },
         )
         assert config.provider == "anthropic"
         assert config.api_key == "sk-test-key"
-        assert config.deep_dive_model == "claude-sonnet-4-5-20250929"
-        assert config.quick_hit_model == "claude-3-5-haiku-20241022"
+        assert config.models["quality"] == "claude-sonnet-4-5-20250929"
+        assert config.models["commodity"] == "claude-3-5-haiku-20241022"
 
-    def test_carries_all_four_fields(self):
+    def test_carries_expected_fields(self):
         config = LLMConfig(
             provider="openai",
             api_key="key-123",
-            deep_dive_model="gpt-4o",
-            quick_hit_model="gpt-4o-mini",
+            models={"quality": "gpt-4o", "commodity": "gpt-4o-mini"},
         )
         fields = {f.name for f in config.__dataclass_fields__.values()}
-        assert fields == {"provider", "api_key", "deep_dive_model", "quick_hit_model"}
+        assert {"provider", "api_key", "models"}.issubset(fields)
 
     def test_different_providers(self):
-        anthropic = LLMConfig("anthropic", "key-a", "model-a", "model-b")
-        openai = LLMConfig("openai", "key-o", "model-c", "model-d")
+        anthropic = LLMConfig("anthropic", "key-a", {"quality": "model-a"})
+        openai = LLMConfig("openai", "key-o", {"quality": "model-c"})
         assert anthropic.provider != openai.provider
         assert anthropic.api_key != openai.api_key
+
+    def test_model_shorthand(self):
+        config = LLMConfig("anthropic", "key", {"quality": "claude-sonnet"})
+        assert config.model == "claude-sonnet"
+
+    def test_model_shorthand_empty_raises(self):
+        config = LLMConfig("anthropic", "key", {})
+        with pytest.raises(ValueError, match="empty"):
+            _ = config.model
 
 
 class TestSummaryResult:

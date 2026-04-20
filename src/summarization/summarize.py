@@ -10,11 +10,20 @@ from typing import Optional
 from storage.types import RepoRecord
 from summarization.client import create_provider
 from summarization.prompts import build_deep_dive_prompt, build_quick_hit_prompt
-from summarization.types import LLMConfig, SummaryResult
-from summarization.validation import parse_llm_response, validate_repo_content
+from summarization.types import LLMConfig, LLMResponse, SummaryResult
+from summarization.validation import validate_repo_content
 
 DEEP_DIVE_MAX_TOKENS = 2000
 QUICK_HIT_MAX_TOKENS = 300
+
+
+def _to_summary_result(response: LLMResponse) -> SummaryResult:
+    """Convert an LLMResponse to a TGbot SummaryResult."""
+    return SummaryResult(
+        content=response.content,
+        model_used=response.model,
+        token_usage=response.token_usage,
+    )
 
 
 def generate_deep_dive(
@@ -24,7 +33,7 @@ def generate_deep_dive(
 ) -> SummaryResult:
     """Generate a deep-dive summary for a repository.
 
-    Pipeline: validate content → build prompt → call LLM → parse → result.
+    Pipeline: validate content → build prompt → call LLM → result.
 
     Args:
         repo: The repository to summarize. Must have populated raw_content.
@@ -44,20 +53,14 @@ def generate_deep_dive(
     system_prompt, user_prompt = build_deep_dive_prompt(repo, recent_context)
 
     provider = create_provider(config)
-    raw_response = provider.call(
-        model=config.deep_dive_model,
+    response = provider.call(
+        model=config.models["quality"],
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         max_tokens=DEEP_DIVE_MAX_TOKENS,
     )
 
-    content, token_usage = parse_llm_response(raw_response)
-
-    return SummaryResult(
-        content=content,
-        model_used=raw_response["model"],
-        token_usage=token_usage,
-    )
+    return _to_summary_result(response)
 
 
 def generate_quick_hit(
@@ -66,7 +69,7 @@ def generate_quick_hit(
 ) -> SummaryResult:
     """Generate a quick-hit summary for a repository.
 
-    Pipeline: validate content → build prompt → call LLM → parse → result.
+    Pipeline: validate content → build prompt → call LLM → result.
 
     Args:
         repo: The repository to summarize. Must have populated raw_content.
@@ -85,17 +88,11 @@ def generate_quick_hit(
     system_prompt, user_prompt = build_quick_hit_prompt(repo)
 
     provider = create_provider(config)
-    raw_response = provider.call(
-        model=config.quick_hit_model,
+    response = provider.call(
+        model=config.models["commodity"],
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         max_tokens=QUICK_HIT_MAX_TOKENS,
     )
 
-    content, token_usage = parse_llm_response(raw_response)
-
-    return SummaryResult(
-        content=content,
-        model_used=raw_response["model"],
-        token_usage=token_usage,
-    )
+    return _to_summary_result(response)

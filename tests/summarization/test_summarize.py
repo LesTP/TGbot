@@ -16,6 +16,7 @@ from summarization.types import (
     InsufficientContentError,
     LLMAPIError,
     LLMConfig,
+    LLMResponse,
     LLMResponseError,
     SummaryResult,
 )
@@ -42,16 +43,27 @@ def _make_repo(raw_content="# Test Repo\n\nThis is a sufficiently long README fo
 
 def _make_config(
     provider="anthropic",
-    deep_dive_model="claude-sonnet-4-5-20250929",
-    quick_hit_model="claude-3-5-haiku-20241022",
+    quality_model="claude-sonnet-4-5-20250929",
+    commodity_model="claude-3-5-haiku-20241022",
 ) -> LLMConfig:
     return LLMConfig(
         provider=provider,
         api_key="sk-test-key",
-        deep_dive_model=deep_dive_model,
-        quick_hit_model=quick_hit_model,
+        models={
+            "quality": quality_model,
+            "commodity": commodity_model,
+        },
     )
 
+
+def _make_llm_response(content="Summary.", model="model", provider="anthropic",
+                        input_tokens=100, output_tokens=50) -> LLMResponse:
+    return LLMResponse(
+        content=content,
+        model=model,
+        provider=provider,
+        token_usage={"input_tokens": input_tokens, "output_tokens": output_tokens},
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -63,11 +75,12 @@ class TestGenerateDeepDive:
     @patch("summarization.summarize.create_provider")
     def test_full_pipeline_returns_summary_result(self, mock_create):
         mock_provider = MagicMock()
-        mock_provider.call.return_value = {
-            "content": "Deep dive analysis of test-repo.",
-            "model": "claude-sonnet-4-5-20250929",
-            "usage": {"input_tokens": 1500, "output_tokens": 800},
-        }
+        mock_provider.call.return_value = _make_llm_response(
+            content="Deep dive analysis of test-repo.",
+            model="claude-sonnet-4-5-20250929",
+            input_tokens=1500,
+            output_tokens=800,
+        )
         mock_create.return_value = mock_provider
 
         result = generate_deep_dive(_make_repo(), _make_config())
@@ -80,14 +93,12 @@ class TestGenerateDeepDive:
     @patch("summarization.summarize.create_provider")
     def test_uses_deep_dive_model(self, mock_create):
         mock_provider = MagicMock()
-        mock_provider.call.return_value = {
-            "content": "Summary.",
-            "model": "my-deep-model",
-            "usage": {"input_tokens": 100, "output_tokens": 50},
-        }
+        mock_provider.call.return_value = _make_llm_response(
+            content="Summary.", model="my-deep-model",
+        )
         mock_create.return_value = mock_provider
 
-        config = _make_config(deep_dive_model="my-deep-model")
+        config = _make_config(quality_model="my-deep-model")
         generate_deep_dive(_make_repo(), config)
 
         call_kwargs = mock_provider.call.call_args
@@ -96,11 +107,7 @@ class TestGenerateDeepDive:
     @patch("summarization.summarize.create_provider")
     def test_uses_deep_dive_max_tokens(self, mock_create):
         mock_provider = MagicMock()
-        mock_provider.call.return_value = {
-            "content": "Summary.",
-            "model": "model",
-            "usage": {"input_tokens": 100, "output_tokens": 50},
-        }
+        mock_provider.call.return_value = _make_llm_response()
         mock_create.return_value = mock_provider
 
         generate_deep_dive(_make_repo(), _make_config())
@@ -111,11 +118,7 @@ class TestGenerateDeepDive:
     @patch("summarization.summarize.create_provider")
     def test_recent_context_passed_to_prompt_builder(self, mock_create):
         mock_provider = MagicMock()
-        mock_provider.call.return_value = {
-            "content": "Summary with context.",
-            "model": "model",
-            "usage": {"input_tokens": 100, "output_tokens": 50},
-        }
+        mock_provider.call.return_value = _make_llm_response(content="Summary with context.")
         mock_create.return_value = mock_provider
 
         context = [{"repo_name": "other/repo", "summary_content": "Other summary.", "date": "2026-03-05"}]
@@ -145,11 +148,7 @@ class TestGenerateDeepDive:
     @patch("summarization.summarize.create_provider")
     def test_llm_response_error_propagated(self, mock_create):
         mock_provider = MagicMock()
-        mock_provider.call.return_value = {
-            "content": "",
-            "model": "model",
-            "usage": {"input_tokens": 100, "output_tokens": 0},
-        }
+        mock_provider.call.side_effect = LLMResponseError("Empty response")
         mock_create.return_value = mock_provider
 
         with pytest.raises(LLMResponseError):
@@ -158,11 +157,11 @@ class TestGenerateDeepDive:
     @patch("summarization.summarize.create_provider")
     def test_token_usage_populated(self, mock_create):
         mock_provider = MagicMock()
-        mock_provider.call.return_value = {
-            "content": "A summary.",
-            "model": "model",
-            "usage": {"input_tokens": 2000, "output_tokens": 1000},
-        }
+        mock_provider.call.return_value = _make_llm_response(
+            content="A summary.",
+            input_tokens=2000,
+            output_tokens=1000,
+        )
         mock_create.return_value = mock_provider
 
         result = generate_deep_dive(_make_repo(), _make_config())
@@ -179,11 +178,12 @@ class TestGenerateQuickHit:
     @patch("summarization.summarize.create_provider")
     def test_full_pipeline_returns_summary_result(self, mock_create):
         mock_provider = MagicMock()
-        mock_provider.call.return_value = {
-            "content": "A brief summary of the tool.",
-            "model": "claude-3-5-haiku-20241022",
-            "usage": {"input_tokens": 800, "output_tokens": 60},
-        }
+        mock_provider.call.return_value = _make_llm_response(
+            content="A brief summary of the tool.",
+            model="claude-3-5-haiku-20241022",
+            input_tokens=800,
+            output_tokens=60,
+        )
         mock_create.return_value = mock_provider
 
         result = generate_quick_hit(_make_repo(), _make_config())
@@ -196,14 +196,12 @@ class TestGenerateQuickHit:
     @patch("summarization.summarize.create_provider")
     def test_uses_quick_hit_model(self, mock_create):
         mock_provider = MagicMock()
-        mock_provider.call.return_value = {
-            "content": "Brief.",
-            "model": "my-quick-model",
-            "usage": {"input_tokens": 100, "output_tokens": 20},
-        }
+        mock_provider.call.return_value = _make_llm_response(
+            content="Brief.", model="my-quick-model",
+        )
         mock_create.return_value = mock_provider
 
-        config = _make_config(quick_hit_model="my-quick-model")
+        config = _make_config(commodity_model="my-quick-model")
         generate_quick_hit(_make_repo(), config)
 
         call_kwargs = mock_provider.call.call_args
@@ -212,11 +210,7 @@ class TestGenerateQuickHit:
     @patch("summarization.summarize.create_provider")
     def test_uses_quick_hit_max_tokens(self, mock_create):
         mock_provider = MagicMock()
-        mock_provider.call.return_value = {
-            "content": "Brief.",
-            "model": "model",
-            "usage": {"input_tokens": 100, "output_tokens": 20},
-        }
+        mock_provider.call.return_value = _make_llm_response(content="Brief.")
         mock_create.return_value = mock_provider
 
         generate_quick_hit(_make_repo(), _make_config())
@@ -242,11 +236,7 @@ class TestGenerateQuickHit:
     @patch("summarization.summarize.create_provider")
     def test_llm_response_error_propagated(self, mock_create):
         mock_provider = MagicMock()
-        mock_provider.call.return_value = {
-            "content": "   ",
-            "model": "model",
-            "usage": {"input_tokens": 100, "output_tokens": 0},
-        }
+        mock_provider.call.side_effect = LLMResponseError("Empty response")
         mock_create.return_value = mock_provider
 
         with pytest.raises(LLMResponseError):
@@ -255,11 +245,11 @@ class TestGenerateQuickHit:
     @patch("summarization.summarize.create_provider")
     def test_token_usage_populated(self, mock_create):
         mock_provider = MagicMock()
-        mock_provider.call.return_value = {
-            "content": "Quick summary.",
-            "model": "model",
-            "usage": {"input_tokens": 600, "output_tokens": 40},
-        }
+        mock_provider.call.return_value = _make_llm_response(
+            content="Quick summary.",
+            input_tokens=600,
+            output_tokens=40,
+        )
         mock_create.return_value = mock_provider
 
         result = generate_quick_hit(_make_repo(), _make_config())
