@@ -203,7 +203,7 @@ TGbot/
 │   │
 │   ├── delivery/         # Telegram message formatting and sending
 │   │   ├── types.py          Digest, DeliveryResult, SummaryWithRepo
-│   │   ├── formatting.py     MarkdownV2 escaping, message layout
+│   │   ├── formatting.py     Message layout (escaping via toolkit)
 │   │   ├── telegram_client.py  Telegram Bot API client
 │   │   ├── telegraph_client.py Telegraph API client (for long content)
 │   │   └── send.py           Orchestrates format → truncate → send
@@ -247,6 +247,9 @@ cd TGbot
 python -m venv venv
 source venv/bin/activate          # Linux/Mac
 # venv\Scripts\activate           # Windows
+# Install the shared toolkit package first (editable, from local checkout)
+pip install -e ../toolkit
+
 pip install requests anthropic python-dotenv
 
 # Configure
@@ -349,6 +352,14 @@ config = PipelineConfig(
 ```
 
 See [ROADMAP.md](ROADMAP.md) for detailed customization scenarios (multiple categories, language filtering, seed repos, model selection, ranking changes).
+
+---
+
+## Shared Toolkit
+
+The `delivery/formatting.py` module imports MarkdownV2 escaping utilities (`escape_markdown`, `escape_url`, `format_link`) from the [toolkit](../toolkit/) package rather than defining them inline. This keeps Telegram-specific text escaping in one place across projects.
+
+The toolkit must be installed before running TGbot — see Setup above.
 
 ---
 

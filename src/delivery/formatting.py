@@ -4,10 +4,9 @@ Delivery message formatting.
 Telegram MarkdownV2 escaping, link formatting, and digest message assembly.
 """
 
-from delivery.types import Digest, SummaryWithRepo
+from toolkit.telegram_client import escape_markdown, escape_url, format_link
 
-# MarkdownV2 special characters that must be escaped with '\'
-_SPECIAL_CHARS = set(r'_*[]()~`>#+-=|{}.!')
+from delivery.types import Digest, SummaryWithRepo
 
 # Emoji mapping for ranking criteria
 _CRITERIA_EMOJI = {
@@ -19,36 +18,6 @@ _CRITERIA_EMOJI = {
 }
 
 _SECTION_SEPARATOR = "━━━━━━━━━━━━━━━━━━"
-
-
-def escape_markdown(text: str) -> str:
-    """Escape all MarkdownV2 special characters in text.
-
-    Every character in Telegram's MarkdownV2 special set is prefixed
-    with a backslash so it renders as a literal character.
-    """
-    result = []
-    for char in text:
-        if char in _SPECIAL_CHARS:
-            result.append('\\')
-        result.append(char)
-    return ''.join(result)
-
-
-def escape_url(url: str) -> str:
-    """Escape characters that would break a MarkdownV2 inline URL.
-
-    Inside (...) only ')' and '\\' are structural and need escaping.
-    """
-    return url.replace('\\', '\\\\').replace(')', '\\)')
-
-
-def format_link(text: str, url: str) -> str:
-    """Build a MarkdownV2 inline link: [escaped_text](escaped_url).
-
-    Text gets full MarkdownV2 escaping; URL only escapes ')' and '\\'.
-    """
-    return f"[{escape_markdown(text)}]({escape_url(url)})"
 
 
 def extract_excerpt(text: str, max_paragraphs: int = 3) -> str:
