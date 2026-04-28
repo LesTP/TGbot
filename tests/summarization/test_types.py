@@ -8,6 +8,7 @@ from summarization.types import (
     LLMConfig,
     LLMResponseError,
     SummaryResult,
+    TokenUsage,
 )
 
 
@@ -56,29 +57,27 @@ class TestSummaryResult:
         result = SummaryResult(
             content="This tool does X and Y.",
             model_used="claude-sonnet-4-5-20250929",
-            token_usage={"input_tokens": 1500, "output_tokens": 800},
+            token_usage=TokenUsage(input_tokens=1500, output_tokens=800),
         )
         assert result.content == "This tool does X and Y."
         assert result.model_used == "claude-sonnet-4-5-20250929"
-        assert result.token_usage == {"input_tokens": 1500, "output_tokens": 800}
+        assert result.token_usage == TokenUsage(input_tokens=1500, output_tokens=800)
 
-    def test_token_usage_has_required_keys(self):
-        usage = {"input_tokens": 100, "output_tokens": 50}
+    def test_token_usage_has_required_fields(self):
+        usage = TokenUsage(input_tokens=100, output_tokens=50)
         result = SummaryResult(content="text", model_used="model", token_usage=usage)
-        assert "input_tokens" in result.token_usage
-        assert "output_tokens" in result.token_usage
-        assert isinstance(result.token_usage["input_tokens"], int)
-        assert isinstance(result.token_usage["output_tokens"], int)
+        assert isinstance(result.token_usage.input_tokens, int)
+        assert isinstance(result.token_usage.output_tokens, int)
 
     def test_empty_content(self):
-        result = SummaryResult(content="", model_used="model", token_usage={"input_tokens": 0, "output_tokens": 0})
+        result = SummaryResult(content="", model_used="model", token_usage=TokenUsage(input_tokens=0, output_tokens=0))
         assert result.content == ""
 
     def test_large_token_counts(self):
-        usage = {"input_tokens": 100000, "output_tokens": 4096}
+        usage = TokenUsage(input_tokens=100000, output_tokens=4096)
         result = SummaryResult(content="text", model_used="model", token_usage=usage)
-        assert result.token_usage["input_tokens"] == 100000
-        assert result.token_usage["output_tokens"] == 4096
+        assert result.token_usage.input_tokens == 100000
+        assert result.token_usage.output_tokens == 4096
 
 
 class TestLLMAPIError:

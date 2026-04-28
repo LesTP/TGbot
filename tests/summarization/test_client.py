@@ -110,8 +110,8 @@ class TestAnthropicProviderSuccess:
         assert result.content == "This is a deep dive summary."
         assert result.model == "claude-sonnet-4-5-20250929"
         assert result.provider == "anthropic"
-        assert result.token_usage["input_tokens"] == 1200
-        assert result.token_usage["output_tokens"] == 800
+        assert result.token_usage.input_tokens == 1200
+        assert result.token_usage.output_tokens == 800
 
     @patch("anthropic.Anthropic")
     def test_passes_correct_params_to_api(self, mock_anthropic_cls):

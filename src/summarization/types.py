@@ -14,6 +14,7 @@ from toolkit.llm_client import (  # noqa: F401
     LLMConfig,
     LLMResponse,
     LLMResponseError,
+    TokenUsage,
 )
 
 
@@ -32,7 +33,7 @@ class SummaryResult:
 
     content: str
     model_used: str
-    token_usage: dict  # {"input_tokens": int, "output_tokens": int}
+    token_usage: TokenUsage
 
 
 # ---------------------------------------------------------------------------

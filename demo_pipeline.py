@@ -149,8 +149,8 @@ def main():
     deep_result = generate_deep_dive(deep_repo, llm_config, recent_context=None)
     log.info("Deep dive: %d chars, %s tokens in / %s tokens out",
              len(deep_result.content),
-             deep_result.token_usage.get("input_tokens", "?"),
-             deep_result.token_usage.get("output_tokens", "?"))
+             deep_result.token_usage.input_tokens,
+             deep_result.token_usage.output_tokens)
     print(f"\n--- Deep Dive Preview (first 300 chars) ---\n{deep_result.content[:300]}...\n")
 
     # Save deep dive summary
@@ -226,11 +226,11 @@ def main():
     print(f"  Deep dive model:    {deep_result.model_used}")
     if quick_results:
         print(f"  Quick hit model:    {quick_results[0][1].model_used}")
-    total_in = deep_result.token_usage.get("input_tokens", 0)
-    total_out = deep_result.token_usage.get("output_tokens", 0)
+    total_in = deep_result.token_usage.input_tokens
+    total_out = deep_result.token_usage.output_tokens
     for _, qr in quick_results:
-        total_in += qr.token_usage.get("input_tokens", 0)
-        total_out += qr.token_usage.get("output_tokens", 0)
+        total_in += qr.token_usage.input_tokens
+        total_out += qr.token_usage.output_tokens
     print(f"  Total tokens:       {total_in:,d} in / {total_out:,d} out")
 
 

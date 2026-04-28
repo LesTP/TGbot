@@ -19,6 +19,7 @@ from summarization.types import (
     LLMResponse,
     LLMResponseError,
     SummaryResult,
+    TokenUsage,
 )
 
 
@@ -62,7 +63,7 @@ def _make_llm_response(content="Summary.", model="model", provider="anthropic",
         content=content,
         model=model,
         provider=provider,
-        token_usage={"input_tokens": input_tokens, "output_tokens": output_tokens},
+        token_usage=TokenUsage(input_tokens=input_tokens, output_tokens=output_tokens),
     )
 
 
@@ -88,7 +89,7 @@ class TestGenerateDeepDive:
         assert isinstance(result, SummaryResult)
         assert result.content == "Deep dive analysis of test-repo."
         assert result.model_used == "claude-sonnet-4-5-20250929"
-        assert result.token_usage == {"input_tokens": 1500, "output_tokens": 800}
+        assert result.token_usage == TokenUsage(input_tokens=1500, output_tokens=800)
 
     @patch("summarization.summarize.create_provider")
     def test_uses_deep_dive_model(self, mock_create):
@@ -165,8 +166,8 @@ class TestGenerateDeepDive:
         mock_create.return_value = mock_provider
 
         result = generate_deep_dive(_make_repo(), _make_config())
-        assert result.token_usage["input_tokens"] == 2000
-        assert result.token_usage["output_tokens"] == 1000
+        assert result.token_usage.input_tokens == 2000
+        assert result.token_usage.output_tokens == 1000
 
 
 # ---------------------------------------------------------------------------
@@ -191,7 +192,7 @@ class TestGenerateQuickHit:
         assert isinstance(result, SummaryResult)
         assert result.content == "A brief summary of the tool."
         assert result.model_used == "claude-3-5-haiku-20241022"
-        assert result.token_usage == {"input_tokens": 800, "output_tokens": 60}
+        assert result.token_usage == TokenUsage(input_tokens=800, output_tokens=60)
 
     @patch("summarization.summarize.create_provider")
     def test_uses_quick_hit_model(self, mock_create):
@@ -253,5 +254,5 @@ class TestGenerateQuickHit:
         mock_create.return_value = mock_provider
 
         result = generate_quick_hit(_make_repo(), _make_config())
-        assert result.token_usage["input_tokens"] == 600
-        assert result.token_usage["output_tokens"] == 40
+        assert result.token_usage.input_tokens == 600
+        assert result.token_usage.output_tokens == 40
